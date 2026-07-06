@@ -219,7 +219,7 @@ Client                    Backend
 
 | Role        | Login with              | Password (demo)        |
 | ----------- | ----------------------- | ---------------------- |
-| Student     | Registration number     | `Stu@<digits>!` e.g. `Stu@202305000090!` for `UOK/2023/05000090` |
+| Student     | Registration number     | Same as reg number, e.g. `202305000078` |
 | Supervisor  | `@uok.ac.rw` email      | `Uok@Sup2026!`         |
 | HOD         | `@uok.ac.rw` email      | `Uok@Hod2026!`         |
 

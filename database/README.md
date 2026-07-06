@@ -53,7 +53,7 @@ python check_db.py
 On first startup with an empty database, the backend automatically inserts demo users, projects, and sample topic proposals. All API data is read from PostgreSQL only.
 
 Demo staff password: `Uok@Hod2026!` (HOD) / `Uok@Sup2026!` (supervisors)  
-Demo student: `UOK/2023/05000090` / `Stu@202305000090!`
+Demo student: `202305000078` / `202305000078` (password = reg number)
 
 Staff must use `@uok.ac.rw` emails (e.g. `hod.it@uok.ac.rw` for IT HOD).
 

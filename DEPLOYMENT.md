@@ -63,7 +63,7 @@ Demo logins after seed:
 
 | Role | Login | Password |
 |------|-------|----------|
-| Student | `202305000078` | `Stu@202305000078!` |
+| Student | `202305000078` | `202305000078` (same as reg number) |
 | Supervisor | `jean.bosco@uok.ac.rw` | `Uok@Sup2026!` |
 | IT HOD | `hod.it@uok.ac.rw` | `Uok@Hod2026!` |
 
