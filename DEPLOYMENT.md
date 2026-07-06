@@ -12,10 +12,40 @@ Deploy **frontend** (Vercel), **backend** (Render), and **database** (Neon) on f
 
 ## Step 1 — PostgreSQL (Neon)
 
-1. Create a project at [neon.tech](https://neon.tech)
-2. Copy the connection string (`postgresql://...`)
-3. In Neon SQL editor, paste and run `database/schema.sql` (optional — backend also creates tables)
-4. For passwords with `@`, set split vars on Render instead of raw `DATABASE_URL` (see backend `.env.example`)
+1. Create a project at [neon.tech](https://neon.tech) and copy the connection string.
+2. Save Neon credentials in `backend/.env.neon` (gitignored):
+
+```env
+PGHOST=ep-xxxxx-pooler.region.aws.neon.tech
+PGPORT=5432
+PGUSER=neondb_owner
+PGPASSWORD=your_neon_password
+PGDATABASE=neondb
+PGSSLMODE=require
+```
+
+3. Initialize the cloud database (creates tables + demo data):
+
+```bash
+cd backend
+chmod +x setup_neon.sh
+./setup_neon.sh
+```
+
+You should see `Connected to database: neondb` and `Step 1 complete`.
+
+4. Optional: in Neon **SQL Editor**, run `database/schema.sql` — not required if `setup_neon.sh` succeeded.
+
+**Render env vars (copy from `.env.neon` for Step 2):**
+
+| Variable | Your value |
+|----------|------------|
+| `PGHOST` | `ep-noisy-dawn-atqp05p1-pooler.c-9.us-east-1.aws.neon.tech` |
+| `PGPORT` | `5432` |
+| `PGUSER` | `neondb_owner` |
+| `PGPASSWORD` | *(from Neon dashboard — same as in `.env.neon`)* |
+| `PGDATABASE` | `neondb` |
+| `PGSSLMODE` | `require` |
 
 ---
 
@@ -28,8 +58,10 @@ Deploy **frontend** (Vercel), **backend** (Render), and **database** (Neon) on f
 |---------|--------|
 | Root directory | `backend` |
 | Runtime | Python 3 |
-| Build command | `pip install -r requirements.txt` |
+| Build command | `pip install --upgrade pip && pip install -r requirements.txt` |
 | Start command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+
+> **Build failed on `pydantic-core` / Rust / Python 3.14?** Add `backend/runtime.txt` with `python-3.12.8` and redeploy. Render defaults to the newest Python, which may lack pre-built wheels for some packages.
 
 3. Environment variables:
 

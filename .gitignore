@@ -4,6 +4,7 @@ backend/__pycache__/
 backend/app/__pycache__/
 backend/uok.db
 backend/.env
+backend/.env.neon
 backend/uploads/
 
 # Frontend

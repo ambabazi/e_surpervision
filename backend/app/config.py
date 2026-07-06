@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     pguser: str = ""
     pgpassword: str = ""
     pgdatabase: str = ""
+    pgsslmode: str = ""
     jwt_secret: str = "uok-esupervision-dev-secret-key-change-me-0123456789"
     jwt_expiration_hours: int = 24
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
@@ -29,10 +30,14 @@ class Settings(BaseSettings):
     def resolved_database_url(self) -> str:
         if self.pguser and self.pgpassword and self.pgdatabase:
             password = quote_plus(self.pgpassword)
-            return (
+            url = (
                 f"postgresql://{self.pguser}:{password}"
                 f"@{self.pghost}:{self.pgport}/{self.pgdatabase}"
             )
+            sslmode = self.pgsslmode or ("require" if "neon.tech" in self.pghost else "")
+            if sslmode:
+                url += f"?sslmode={sslmode}"
+            return url
         return self.database_url
 
 

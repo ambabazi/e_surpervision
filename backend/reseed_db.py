@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Clear PostgreSQL demo data and load the full rich seed dataset."""
 
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 
-from app.database import SessionLocal, engine
+from app.database import Base, SessionLocal, engine
 from app.hod_sync import sync_department_structure
 from app.migrate import backfill_notification_paths, migrate_schema, sync_student_registrations
 from app.seed import seed_demo_data
@@ -22,13 +22,19 @@ TABLES = (
 
 
 def clear_demo_data() -> None:
+    inspector = inspect(engine)
+    existing = set(inspector.get_table_names())
+    if not existing:
+        return
     with engine.begin() as conn:
         for table in TABLES:
-            conn.execute(text(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE"))
+            if table in existing:
+                conn.execute(text(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE"))
 
 
 def main() -> int:
     migrate_schema(engine)
+    Base.metadata.create_all(bind=engine)
     print("Clearing existing demo data…")
     clear_demo_data()
     db = SessionLocal()
