@@ -1,0 +1,19 @@
+# Python backend
+backend/.venv/
+backend/__pycache__/
+backend/app/__pycache__/
+backend/uok.db
+backend/.env
+backend/uploads/
+
+# Frontend
+frontend/dist/
+frontend/node_modules/
+frontend/.env.local
+
+# Logs & IDE
+*.log
+.idea/
+*.iml
+.vscode/
+.DS_Store

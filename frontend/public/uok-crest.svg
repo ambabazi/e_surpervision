@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 96" fill="none">
+  <!-- University of Kigali crest  shield with book, torch, globe -->
+  <path d="M40 2L74 14V44C74 72 58 88 40 94C22 88 6 72 6 44V14L40 2Z" fill="#ffffff" stroke="#801830" stroke-width="2"/>
+  <path d="M40 6L70 16.5V44C70 69 56 83 40 88.5C24 83 10 69 10 44V16.5L40 6Z" fill="#1D428A"/>
+
+  <!-- Globe arc -->
+  <ellipse cx="40" cy="38" rx="18" ry="14" fill="none" stroke="#FDB913" stroke-width="1.5"/>
+  <path d="M22 38H58" stroke="#FDB913" stroke-width="1"/>
+  <path d="M40 24C33 30 33 46 40 52C47 46 47 30 40 24Z" fill="none" stroke="#FDB913" stroke-width="1"/>
+
+  <!-- Open book -->
+  <path d="M28 58H52V72H28V58Z" fill="#FDB913"/>
+  <path d="M40 58V72" stroke="#801830" stroke-width="1.2"/>
+  <path d="M28 58C32 55 36 55 40 58C44 55 48 55 52 58" stroke="#801830" stroke-width="1" fill="none"/>
+
+  <!-- Torch / flame -->
+  <path d="M40 18C37 22 36 26 38 30C36 28 35 25 36 22C34 24 33 28 35 32C33 30 32 26 34 20C36 16 40 14 40 14C40 14 44 16 46 20C48 26 47 30 45 32C47 28 46 24 44 22C45 25 44 28 42 30C44 26 43 22 40 18Z" fill="#FDB913"/>
+  <rect x="38.5" y="30" width="3" height="8" rx="1" fill="#801830"/>
+
+  <!-- Building columns (simplified) -->
+  <rect x="18" y="48" width="3" height="12" fill="#ffffff" opacity="0.9"/>
+  <rect x="24" y="46" width="3" height="14" fill="#ffffff" opacity="0.9"/>
+  <rect x="53" y="46" width="3" height="14" fill="#ffffff" opacity="0.9"/>
+  <rect x="59" y="48" width="3" height="12" fill="#ffffff" opacity="0.9"/>
+  <path d="M16 60H64" stroke="#FDB913" stroke-width="1.5"/>
+
+  <!-- Bottom banner -->
+  <path d="M22 76H58L54 82H26L22 76Z" fill="#801830"/>
+  <text x="40" y="81" text-anchor="middle" fill="#FDB913" font-size="5" font-family="Georgia, serif" font-weight="bold">UoK</text>
+</svg>

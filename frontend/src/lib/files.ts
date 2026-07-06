@@ -1,0 +1,30 @@
+const ALLOWED = [".pdf", ".doc", ".docx"] as const;
+
+const MIME_TYPES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
+
+export function validateSubmissionFile(file: File): string | null {
+  const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+  if (!ALLOWED.includes(ext as (typeof ALLOWED)[number])) {
+    return "Only PDF and Word documents (.pdf, .doc, .docx) are allowed.";
+  }
+  if (file.type && !MIME_TYPES.has(file.type)) {
+    return "Invalid file type. Please upload a PDF or Word document.";
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    return "File is too large. Maximum size is 10 MB.";
+  }
+  if (file.size === 0) {
+    return "The selected file is empty.";
+  }
+  return null;
+}
+
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}

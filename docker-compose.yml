@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: uok-esupervision-db
+    environment:
+      POSTGRES_DB: uok_esupervision
+      POSTGRES_USER: uok
+      POSTGRES_PASSWORD: uok
+    ports:
+      - "5432:5432"
+    volumes:
+      - uok_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U uok -d uok_esupervision"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  uok_pgdata:
