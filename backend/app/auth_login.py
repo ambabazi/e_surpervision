@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.auth import create_token, verify_password
+from app.demo_credentials import format_registration_number
 from app.models import Role, User
 from app.schemas import AuthResponse
 from app.services import user_out
@@ -12,7 +13,10 @@ UOK_STAFF_EMAIL = re.compile(r"^[a-zA-Z0-9._%+-]+@uok\.ac\.rw$", re.IGNORECASE)
 
 
 def normalize_reg_number(value: str) -> str:
-    return value.strip().upper()
+    try:
+        return format_registration_number(value)
+    except ValueError:
+        return value.strip()
 
 
 def authenticate_user(db: Session, *, identifier: str, password: str, portal: Role | None) -> User:
@@ -21,7 +25,11 @@ def authenticate_user(db: Session, *, identifier: str, password: str, portal: Ro
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid credentials")
 
     if portal == Role.STUDENT or "@" not in identifier:
-        reg = normalize_reg_number(identifier)
+        try:
+            reg = format_registration_number(identifier)
+        except ValueError as exc:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
         user = db.query(User).filter(User.registration_number == reg, User.role == Role.STUDENT).first()
         if not user or not verify_password(password, user.password):
             raise HTTPException(

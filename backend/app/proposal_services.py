@@ -33,7 +33,7 @@ from app.schemas import (
 )
 from app.services import user_out, supervisor_load, DEFAULT_CAPACITY
 from app.similarity import score_proposal_topics
-from app.demo_credentials import student_demo_password
+from app.demo_credentials import format_registration_number, student_demo_password
 from app.email_service import notify_proposal_approved, notify_proposal_rejected
 from app.departments import Department, department_for_program, parse_department
 
@@ -41,7 +41,7 @@ REVIEW_DEADLINE_HOURS = 168  # 7 days
 
 
 def _normalize_reg(reg: str) -> str:
-    return reg.strip().upper()
+    return format_registration_number(reg)
 
 
 def _ensure_reg_available_for_proposal(db: Session, reg: str, *, exclude_proposal_id: int | None = None) -> None:

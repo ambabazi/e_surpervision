@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Send, GraduationCap, BookOpen, Users } from "lucide-react";
 import { api } from "@/lib/api";
+import { formatRegNumberInput } from "@/lib/regNumber";
 import UokLogo from "@/components/UokLogo";
 import { Toast } from "@/components/Toast";
 import type { DeptPrograms, PublicSupervisor } from "@/types";
@@ -81,7 +82,7 @@ export default function TopicProposalForm() {
     try {
       await api.post("/public/topic-proposals", {
         fullName: form.fullName,
-        registrationNumber: form.registrationNumber.trim().toUpperCase(),
+        registrationNumber: formatRegNumberInput(form.registrationNumber),
         email: form.email,
         phone: form.phone || undefined,
         program: form.program,
@@ -192,9 +193,11 @@ export default function TopicProposalForm() {
                 <input
                   className="input font-mono uppercase"
                   required
-                  placeholder="UOK/2023/0150"
+                  placeholder="202305000078"
                   value={form.registrationNumber}
-                  onChange={(e) => set("registrationNumber", e.target.value.toUpperCase())}
+                  onChange={(e) => set("registrationNumber", formatRegNumberInput(e.target.value))}
+                  maxLength={13}
+                  inputMode="numeric"
                 />
               </div>
               <div>

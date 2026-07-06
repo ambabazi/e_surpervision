@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { LogIn, Lock, Mail, GraduationCap, UserCog, Building2, Hash } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import UokLogo from "@/components/UokLogo";
+import { EXAMPLE_REG_NUMBER, EXAMPLE_STUDENT_PASSWORD, formatRegNumberInput } from "@/lib/regNumber";
 import type { Role } from "@/types";
 
 const PORTAL_CONFIG: Record<
@@ -22,9 +23,9 @@ const PORTAL_CONFIG: Record<
   STUDENT: {
     label: "Student",
     icon: GraduationCap,
-    identifier: "UOK/2023/05000090",
-    password: "Stu@202305000090!",
-    hint: "Sign in with your registration number. Demo password for UOK/2023/05000090 is shown below.",
+    identifier: EXAMPLE_REG_NUMBER,
+    password: EXAMPLE_STUDENT_PASSWORD,
+    hint: "13-digit registration number: year (2023) + intake (05=May) + student number (000078).",
     identifierLabel: "Registration Number",
     identifierType: "text",
     tagline: "Track your capstone project, submit work, and receive supervisor feedback.",
@@ -154,14 +155,18 @@ export default function Login({ role }: LoginProps) {
                 )}
                 <input
                   type={config.identifierType}
-                  className="input pl-9 uppercase"
+                  className="input pl-9"
                   value={identifier}
                   onChange={(e) =>
-                    setIdentifier(role === "STUDENT" ? e.target.value.toUpperCase() : e.target.value)
+                    setIdentifier(
+                      role === "STUDENT" ? formatRegNumberInput(e.target.value) : e.target.value,
+                    )
                   }
                   required
                   autoComplete={role === "STUDENT" ? "username" : "email"}
-                  placeholder={role === "STUDENT" ? "UOK/2022/0092" : "name@uok.ac.rw"}
+                  placeholder={role === "STUDENT" ? "202305000078" : "name@uok.ac.rw"}
+                  maxLength={role === "STUDENT" ? 13 : undefined}
+                  inputMode={role === "STUDENT" ? "numeric" : undefined}
                 />
               </div>
               <p className="mt-1 text-xs text-slate-400">{config.hint}</p>
@@ -200,10 +205,10 @@ export default function Login({ role }: LoginProps) {
             {role === "STUDENT" ? (
               <>
                 Demo reg number:{" "}
-                <span className="font-mono text-campus-maroon">UOK/2023/05000090</span>
+                <span className="font-mono text-campus-maroon">{EXAMPLE_REG_NUMBER}</span>
                 <br />
                 Demo password:{" "}
-                <span className="font-mono text-campus-maroon">Stu@202305000090!</span>
+                <span className="font-mono text-campus-maroon">{EXAMPLE_STUDENT_PASSWORD}</span>
               </>
             ) : (
               <>

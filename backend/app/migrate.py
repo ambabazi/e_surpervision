@@ -1,11 +1,11 @@
 from sqlalchemy import inspect
 
 from app.auth import hash_password, verify_password
-from app.demo_credentials import EXAMPLE_REG_FORMATTED, student_demo_password
+from app.demo_credentials import EXAMPLE_REG_NUMBER, format_registration_number, student_demo_password
 from app.models import Role, User
 
 LEGACY_STUDENT_EMAILS = {
-    "alex.mwangi@st.uok.ac.rw": EXAMPLE_REG_FORMATTED,
+    "alex.mwangi@st.uok.ac.rw": EXAMPLE_REG_NUMBER,
 }
 
 
@@ -83,6 +83,13 @@ def sync_student_registrations(db):
         if not user.registration_number:
             continue
         expected = student_demo_password(user.registration_number)
+        try:
+            normalized = format_registration_number(user.registration_number)
+            if user.registration_number != normalized:
+                user.registration_number = normalized
+                changed = True
+        except ValueError:
+            pass
         if not verify_password(expected, user.password):
             user.password = hash_password(expected)
             changed = True

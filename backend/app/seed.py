@@ -3,12 +3,7 @@ from datetime import date, datetime, timedelta
 from sqlalchemy.orm import Session
 
 from app.auth import hash_password
-from app.demo_credentials import (
-    EXAMPLE_REG_FORMATTED,
-    HOD_DEMO_PASSWORD,
-    SUPERVISOR_DEMO_PASSWORD,
-    student_demo_password,
-)
+from app.demo_credentials import EXAMPLE_REG_NUMBER, HOD_DEMO_PASSWORD, SUPERVISOR_DEMO_PASSWORD, student_demo_password
 from app.models import (
     Feedback,
     Notification,
@@ -57,9 +52,9 @@ def seed_demo_data(db: Session) -> None:
 
     # --- Featured student (example reg 202305000090) ---
     aggie = _student(
-        db, "Aggie Moraa", "aggie.moraa.capstone@gmail.com", EXAMPLE_REG_FORMATTED,
+        db, "Aggie Moraa", "aggie.moraa.capstone@gmail.com", EXAMPLE_REG_NUMBER,
         "BSc Software Engineering", "IT", "+250 788 300 100",
-        student_demo_password(EXAMPLE_REG_FORMATTED),
+        student_demo_password(EXAMPLE_REG_NUMBER),
     )
     aggie_project = _project(
         db,
@@ -72,83 +67,83 @@ def seed_demo_data(db: Session) -> None:
     _seed_it_project_detail(db, aggie_project, aggie, bosco)
 
     # --- IT students ---
-    emmanuel = _student(db, "Emmanuel Nshuti", "emmanuel.nshuti.dev@gmail.com", "UOK/2022/0145",
-                        "BSc Software Engineering", "IT", "+250 788 300 302", student_demo_password("UOK/2022/0145"))
+    emmanuel = _student(db, "Emmanuel Nshuti", "emmanuel.nshuti.dev@gmail.com", "202205000145",
+                        "BSc Software Engineering", "IT", "+250 788 300 302", student_demo_password("202205000145"))
     em_proj = _project(db, "Blockchain for Health Records", "Permissioned blockchain for patient records.",
                        "Chapter 4", ProjectStatus.UNDER_REVIEW, 82,
                        date.today() - timedelta(days=140), date.today() + timedelta(days=14), emmanuel, bosco)
     _submission(db, em_proj, "Chapter 4 - Implementation", "Smart contracts and access control.", SubmissionStatus.UNDER_REVIEW, days_ago=2)
     _submission(db, em_proj, "Chapter 3 - Methodology", "Research design and ethics.", SubmissionStatus.APPROVED, days_ago=20)
 
-    clarisse = _student(db, "Clarisse Mutoni", "clarisse.mutoni.ml@gmail.com", "UOK/2022/0188",
-                        "BSc Information Systems", "IT", "+250 788 300 303", student_demo_password("UOK/2022/0188"))
+    clarisse = _student(db, "Clarisse Mutoni", "clarisse.mutoni.ml@gmail.com", "202205000188",
+                        "BSc Information Systems", "IT", "+250 788 300 303", student_demo_password("202205000188"))
     cl_proj = _project(db, "ML Crop Yield Prediction", "Predicting yields for smallholder farmers.",
                        "Chapter 3", ProjectStatus.IN_PROGRESS, 55,
                        date.today() - timedelta(days=80), date.today() + timedelta(days=30), clarisse, nshuti)
     s_cl = _submission(db, cl_proj, "Dataset & Model Plan", "Datasets and baseline models.", SubmissionStatus.SUBMITTED, days_ago=1)
 
-    leon = _student(db, "Leon Kagabo", "leon.kagabo.access@gmail.com", "UOK/2022/0201",
-                    "BSc Software Engineering", "IT", "+250 788 300 304", student_demo_password("UOK/2022/0201"))
+    leon = _student(db, "Leon Kagabo", "leon.kagabo.access@gmail.com", "202205000201",
+                    "BSc Software Engineering", "IT", "+250 788 300 304", student_demo_password("202205000201"))
     _project(db, "Accessible E-Learning Platform", "Screen-reader-first e-learning design.",
              "Chapter 2", ProjectStatus.REVISION, 38,
              date.today() - timedelta(days=55), date.today() + timedelta(days=45), leon, mukandoli)
 
-    diane = _student(db, "Diane Ingabire", "diane.ingabire.iot@gmail.com", "UOK/2022/0112",
-                     "BSc Information Systems", "IT", "+250 788 300 305", student_demo_password("UOK/2022/0112"))
+    diane = _student(db, "Diane Ingabire", "diane.ingabire.iot@gmail.com", "202205000112",
+                     "BSc Information Systems", "IT", "+250 788 300 305", student_demo_password("202205000112"))
     di_proj = _project(db, "Smart Campus IoT Dashboard", "Facilities management sensor dashboard.",
                        "Chapter 3", ProjectStatus.IN_PROGRESS, 72,
                        date.today() - timedelta(days=110), date.today() + timedelta(days=12), diane, mukandoli)
     _task(db, di_proj, "Sensor API Integration", "Integrate MQTT feeds.", "DEVELOPMENT", TaskStatus.IN_PROGRESS, Priority.HIGH, 80, date.today() + timedelta(days=5), False)
 
-    patrick = _student(db, "Patrick Niyonsenga", "patrick.cyber@gmail.com", "UOK/2021/0067",
-                       "BSc Cybersecurity", "IT", "+250 788 300 306", student_demo_password("UOK/2021/0067"))
+    patrick = _student(db, "Patrick Niyonsenga", "patrick.cyber@gmail.com", "202105000067",
+                       "BSc Cybersecurity", "IT", "+250 788 300 306", student_demo_password("202105000067"))
     _project(db, "Deep Learning Intrusion Detection", "Network IDS using deep learning.",
              "Chapter 5", ProjectStatus.COMPLETED, 100,
              date.today() - timedelta(days=200), date.today() - timedelta(days=3), patrick, habimana)
 
-    aline = _student(db, "Aline Uwimana", "aline.uwimana.study@gmail.com", "UOK/2022/0210",
-                     "BSc Software Engineering", "IT", "+250 788 300 307", student_demo_password("UOK/2022/0210"))
-    kevin = _student(db, "Kevin Mugisha", "kevin.mugisha.dev@gmail.com", "UOK/2022/0215",
-                     "BSc Cybersecurity", "IT", "+250 788 300 308", student_demo_password("UOK/2022/0215"))
+    aline = _student(db, "Aline Uwimana", "aline.uwimana.study@gmail.com", "202205000210",
+                     "BSc Software Engineering", "IT", "+250 788 300 307", student_demo_password("202205000210"))
+    kevin = _student(db, "Kevin Mugisha", "kevin.mugisha.dev@gmail.com", "202205000215",
+                     "BSc Cybersecurity", "IT", "+250 788 300 308", student_demo_password("202205000215"))
 
     # --- Law students ---
-    law_st1 = _student(db, "Immaculee Kayitesi", "immaculee.kayitesi.law@gmail.com", "UOK/2022/0301",
-                       "LLB Commercial Law", "LAW", "+250 788 310 401", student_demo_password("UOK/2022/0301"))
+    law_st1 = _student(db, "Immaculee Kayitesi", "immaculee.kayitesi.law@gmail.com", "202205000301",
+                       "LLB Commercial Law", "LAW", "+250 788 310 401", student_demo_password("202205000301"))
     law_p1 = _project(db, "Digital Contract Enforcement in Rwanda", "Legal framework for e-contracts.",
                       "Chapter 3", ProjectStatus.IN_PROGRESS, 60,
                       date.today() - timedelta(days=100), date.today() + timedelta(days=25), law_st1, law_kam)
     _submission(db, law_p1, "Literature Review Draft", "Comparative contract law review.", SubmissionStatus.UNDER_REVIEW, days_ago=4)
 
-    law_st2 = _student(db, "Fabrice Habimana", "fabrice.habimana.law@gmail.com", "UOK/2023/0302",
-                       "LLB Human Rights Law", "LAW", "+250 788 310 402", student_demo_password("UOK/2023/0302"))
+    law_st2 = _student(db, "Fabrice Habimana", "fabrice.habimana.law@gmail.com", "202305000302",
+                       "LLB Human Rights Law", "LAW", "+250 788 310 402", student_demo_password("202305000302"))
     _project(db, "Access to Justice for Rural Communities", "Barriers and policy recommendations.",
              "Chapter 2", ProjectStatus.PROPOSAL, 15,
              date.today() - timedelta(days=20), date.today() + timedelta(days=120), law_st2, law_uwa)
 
     # --- Business students ---
-    biz_st1 = _student(db, "Chantal Uwase", "chantal.uwase.business@gmail.com", "UOK/2022/0401",
-                       "BBA Finance", "BUSINESS", "+250 788 320 501", student_demo_password("UOK/2022/0401"))
+    biz_st1 = _student(db, "Chantal Uwase", "chantal.uwase.business@gmail.com", "202205000401",
+                       "BBA Finance", "BUSINESS", "+250 788 320 501", student_demo_password("202205000401"))
     biz_p1 = _project(db, "SME Credit Risk Modelling", "Credit scoring for Rwandan SMEs.",
                       "Chapter 4", ProjectStatus.UNDER_REVIEW, 74,
                       date.today() - timedelta(days=130), date.today() + timedelta(days=16), biz_st1, finance)
     _submission(db, biz_p1, "Financial Analysis Chapter", "Quantitative risk models.", SubmissionStatus.SUBMITTED, days_ago=3)
 
-    biz_st2 = _student(db, "Eric Nkurunziza", "eric.nkurunziza.mba@gmail.com", "UOK/2023/0402",
-                       "BBA Marketing", "BUSINESS", "+250 788 320 502", student_demo_password("UOK/2023/0402"))
+    biz_st2 = _student(db, "Eric Nkurunziza", "eric.nkurunziza.mba@gmail.com", "202305000402",
+                       "BBA Marketing", "BUSINESS", "+250 788 320 502", student_demo_password("202305000402"))
     _project(db, "Social Media ROI for Local Retail", "Measuring campaign effectiveness.",
              "Chapter 2", ProjectStatus.IN_PROGRESS, 42,
              date.today() - timedelta(days=60), date.today() + timedelta(days=40), biz_st2, biz_mug)
 
     # --- Education students ---
-    edu_st1 = _student(db, "Marie Claire Ingabire", "marie.ingabire.edu@gmail.com", "UOK/2022/0501",
-                       "BEd Early Childhood", "EDUCATION", "+250 788 330 601", student_demo_password("UOK/2022/0501"))
+    edu_st1 = _student(db, "Marie Claire Ingabire", "marie.ingabire.edu@gmail.com", "202205000501",
+                       "BEd Early Childhood", "EDUCATION", "+250 788 330 601", student_demo_password("202205000501"))
     edu_p1 = _project(db, "Play-Based Learning in Kigali Preschools", "Classroom intervention study.",
                       "Chapter 3", ProjectStatus.IN_PROGRESS, 58,
                       date.today() - timedelta(days=90), date.today() + timedelta(days=28), edu_st1, edu_niy)
     _submission(db, edu_p1, "Field Observation Report", "Week 4 classroom notes.", SubmissionStatus.APPROVED, days_ago=10)
 
-    edu_st2 = _student(db, "Samuel Bizimana", "samuel.bizimana.teacher@gmail.com", "UOK/2023/0502",
-                       "BEd Curriculum Studies", "EDUCATION", "+250 788 330 602", student_demo_password("UOK/2023/0502"))
+    edu_st2 = _student(db, "Samuel Bizimana", "samuel.bizimana.teacher@gmail.com", "202305000502",
+                       "BEd Curriculum Studies", "EDUCATION", "+250 788 330 602", student_demo_password("202305000502"))
     _project(db, "Competency-Based Assessment Tools", "Rubrics aligned to CBC policy.",
              "Chapter 2", ProjectStatus.REVISION, 35,
              date.today() - timedelta(days=45), date.today() + timedelta(days=50), edu_st2, edu_mut)
@@ -156,7 +151,7 @@ def seed_demo_data(db: Session) -> None:
     # --- Topic proposals (pending / approved / rejected) ---
     db.add(TopicProposal(
         full_name="Samuel Nkurunziza", email="samuel.nkurunziza@gmail.com",
-        registration_number="UOK/2023/0150", phone="+250 788 400 401",
+        registration_number="202305000150", phone="+250 788 400 401",
         program="BSc Software Engineering", department="IT",
         topic_1="AI Student Advising Chatbot", abstract_1="NLP chatbot for course planning.",
         topic_2="Campus Navigation App", abstract_2="Cross-platform campus navigation.",
@@ -166,7 +161,7 @@ def seed_demo_data(db: Session) -> None:
     ))
     db.add(TopicProposal(
         full_name="Divine Uwimana", email="divine.uwimana@gmail.com",
-        registration_number="UOK/2023/0155", phone="+250 788 400 405",
+        registration_number="202305000155", phone="+250 788 400 405",
         program="LLB Commercial Law", department="LAW",
         topic_1="Arbitration in Cross-Border Trade", abstract_1="Regional dispute resolution.",
         topic_2="Consumer Protection Online", abstract_2="E-commerce liability.",
@@ -176,7 +171,7 @@ def seed_demo_data(db: Session) -> None:
     ))
     db.add(TopicProposal(
         full_name="Grace Mukamana", email="grace.mukamana@gmail.com",
-        registration_number="UOK/2023/0160", phone="+250 788 400 410",
+        registration_number="202305000160", phone="+250 788 400 410",
         program="BBA Finance", department="BUSINESS",
         topic_1="Microfinance Portfolio Analysis", abstract_1="Risk in SACCO lending.",
         topic_2="Green Investment Funds", abstract_2="ESG metrics for Rwanda.",
@@ -186,7 +181,7 @@ def seed_demo_data(db: Session) -> None:
     ))
     db.add(TopicProposal(
         full_name="Rejected Applicant", email="rejected.applicant@gmail.com",
-        registration_number="UOK/2023/0199", phone="+250 788 400 499",
+        registration_number="202305000199", phone="+250 788 400 499",
         program="BSc Software Engineering", department="IT",
         topic_1="Generic Web App", abstract_1="A simple CRUD app.",
         topic_2="Todo List Clone", abstract_2="Another todo app.",
@@ -281,7 +276,7 @@ def _student(db, full_name, email, reg_number, program, department, phone, passw
     u = User(
         full_name=full_name,
         email=email.lower(),
-        registration_number=reg_number.upper(),
+        registration_number=reg_number,
         password=hash_password(password),
         role=Role.STUDENT,
         department=department,

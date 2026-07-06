@@ -113,7 +113,7 @@ Health check: `https://YOUR-API.onrender.com/api/health`
 
 | Setting | Value |
 |---------|--------|
-| Root directory | `frontend` |
+| **Root Directory** | **`frontend`** (required) |
 | Build command | `npm run build` |
 | Output directory | `dist` |
 
@@ -124,6 +124,8 @@ Health check: `https://YOUR-API.onrender.com/api/health`
 | `VITE_API_URL` | `https://YOUR-API.onrender.com/api` |
 
 4. Deploy → open your Vercel URL
+
+> **Logo missing on Vercel?** Ensure Root Directory is `frontend` and redeploy after latest push (logo is bundled in the app build).
 
 ---
 

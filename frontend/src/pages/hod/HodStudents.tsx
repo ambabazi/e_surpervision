@@ -146,7 +146,7 @@ function CreateStudentModal({
 
         <div className="space-y-3">
           <input className="input" placeholder="Full name" value={form.fullName} onChange={(e) => set("fullName", e.target.value)} />
-          <input className="input" placeholder="Registration number (UOK/2023/0100)" value={form.registrationNumber} onChange={(e) => set("registrationNumber", e.target.value)} />
+          <input className="input" placeholder="202305000100" value={form.registrationNumber} onChange={(e) => set("registrationNumber", e.target.value.replace(/\D/g, "").slice(0, 13))} maxLength={13} inputMode="numeric" />
           <input className="input" type="email" placeholder="Email" value={form.email} onChange={(e) => set("email", e.target.value)} />
           <input className="input" placeholder="Program" value={form.program} onChange={(e) => set("program", e.target.value)} />
           <input className="input" placeholder="Phone (optional)" value={form.phone} onChange={(e) => set("phone", e.target.value)} />
