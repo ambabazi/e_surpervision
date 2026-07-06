@@ -51,17 +51,28 @@ You should see `Connected to database: neondb` and `Step 1 complete`.
 
 ## Step 2 — Backend (Render)
 
-1. [render.com](https://render.com) → **New Web Service** → connect GitHub repo
+1. [render.com](https://render.com) → **New Web Service** → connect GitHub repo `ambabazi/e_surpervision`
 2. Settings:
 
 | Setting | Value |
 |---------|--------|
-| Root directory | `backend` |
-| Runtime | Python 3 |
-| Build command | `pip install --upgrade pip && pip install -r requirements.txt` |
-| Start command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| Root directory | *(leave blank)* **OR** `backend` — see below |
+| Build command | `chmod +x build.sh && ./build.sh` |
+| Start command | `chmod +x start.sh && ./start.sh` |
+| Health check | `/api/health` |
 
-> **Build failed on `pydantic-core` / Rust / Python 3.14?** Add `backend/runtime.txt` with `python-3.12.8` and redeploy. Render defaults to the newest Python, which may lack pre-built wheels for some packages.
+**Two valid setups (pick one):**
+
+| Root Directory | Build | Start | Python pin file |
+|----------------|-------|-------|-----------------|
+| *(blank — repo root)* | `chmod +x build.sh && ./build.sh` | `chmod +x start.sh && ./start.sh` | `runtime.txt` at repo root |
+| `backend` | `chmod +x build.sh && ./build.sh` | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` | `backend/runtime.txt` |
+
+3. **Environment** → add `PYTHON_VERSION` = `3.12.8` (stops Render using Python 3.14)
+
+4. **Manual Deploy** → **Clear build cache & deploy**
+
+Build log must show **Python 3.12.x**, not 3.14. If you see `build.sh: No such file or directory`, push latest code to GitHub first.
 
 3. Environment variables:
 
