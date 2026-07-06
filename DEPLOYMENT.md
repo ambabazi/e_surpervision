@@ -20,7 +20,7 @@ PGHOST=ep-xxxxx-pooler.region.aws.neon.tech
 PGPORT=5432
 PGUSER=neondb_owner
 PGPASSWORD=your_neon_password
-PGDATABASE=neondb
+PGDATABASE=e_supervision
 PGSSLMODE=require
 ```
 
@@ -32,7 +32,7 @@ chmod +x setup_neon.sh
 ./setup_neon.sh
 ```
 
-You should see `Connected to database: neondb` and `Step 1 complete`.
+You should see `Connected to database: e_supervision` and `Step 1 complete`.
 
 4. Optional: in Neon **SQL Editor**, run `database/schema.sql` — not required if `setup_neon.sh` succeeded.
 
@@ -44,7 +44,7 @@ You should see `Connected to database: neondb` and `Step 1 complete`.
 | `PGPORT` | `5432` |
 | `PGUSER` | `neondb_owner` |
 | `PGPASSWORD` | *(from Neon dashboard — same as in `.env.neon`)* |
-| `PGDATABASE` | `neondb` |
+| `PGDATABASE` | **`e_supervision`** |
 | `PGSSLMODE` | `require` |
 
 ### Load demo data into Neon (production)
@@ -102,7 +102,7 @@ Build log must show **Python 3.12.x**, not 3.14. If you see `build.sh: No such f
 | `PGPORT` | `5432` |
 | `PGUSER` | Neon user |
 | `PGPASSWORD` | Neon password |
-| `PGDATABASE` | `neondb` |
+| `PGDATABASE` | **`e_supervision`** |
 | `JWT_SECRET` | Long random string (32+ chars) |
 | `CORS_ORIGINS` | `https://your-app.vercel.app` |
 | `MAIL_ENABLED` | `true` |
