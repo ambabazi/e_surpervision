@@ -1,4 +1,4 @@
-import uokLogo from "@/assets/uok-logo-official.png";
+import uokLogo from "@/assets/uok-logo.png";
 
 interface UokLogoProps {
   variant?: "default" | "light" | "compact";
@@ -11,7 +11,7 @@ const SIZES = {
   compact: "h-10 max-w-[min(100%,220px)]",
 } as const;
 
-/** Official University of Kigali logo — bundled PNG for reliable Vercel/production deploys */
+/** Official University of Kigali logo — transparent PNG, bundled for production */
 export default function UokLogo({ variant = "default", className = "" }: UokLogoProps) {
   const size =
     variant === "compact" ? SIZES.compact : variant === "light" ? SIZES.light : SIZES.default;
