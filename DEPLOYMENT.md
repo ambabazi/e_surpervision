@@ -47,6 +47,26 @@ You should see `Connected to database: neondb` and `Step 1 complete`.
 | `PGDATABASE` | `neondb` |
 | `PGSSLMODE` | `require` |
 
+### Load demo data into Neon (production)
+
+From your PC (uses `backend/.env.neon` — not your local pgAdmin DB):
+
+```bash
+cd backend
+chmod +x seed_neon_demo.sh
+./seed_neon_demo.sh
+```
+
+This clears and reloads all demo users, projects, submissions, and proposals. Safe to re-run anytime.
+
+Demo logins after seed:
+
+| Role | Login | Password |
+|------|-------|----------|
+| Student | `202305000078` | `Stu@202305000078!` |
+| Supervisor | `jean.bosco@uok.ac.rw` | `Uok@Sup2026!` |
+| IT HOD | `hod.it@uok.ac.rw` | `Uok@Hod2026!` |
+
 ---
 
 ## Step 2 — Backend (Render)

@@ -1,4 +1,4 @@
-import uokCrest from "@/assets/uok-crest.svg";
+import uokLogo from "@/assets/uok-logo-official.png";
 
 interface UokLogoProps {
   variant?: "default" | "light" | "compact";
@@ -11,14 +11,14 @@ const SIZES = {
   compact: "h-10 max-w-[min(100%,220px)]",
 } as const;
 
-/** Official University of Kigali logo — bundled so it works on Vercel/CDN deploys */
+/** Official University of Kigali logo — bundled PNG for reliable Vercel/production deploys */
 export default function UokLogo({ variant = "default", className = "" }: UokLogoProps) {
   const size =
     variant === "compact" ? SIZES.compact : variant === "light" ? SIZES.light : SIZES.default;
 
   return (
     <img
-      src={uokCrest}
+      src={uokLogo}
       alt="University of Kigali"
       className={`w-auto object-contain object-left ${size} ${className}`}
     />
