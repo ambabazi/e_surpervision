@@ -1,12 +1,8 @@
 from sqlalchemy import inspect
 
 from app.auth import hash_password, verify_password
-from app.demo_credentials import EXAMPLE_REG_NUMBER, format_registration_number, student_demo_password
+from app.demo_credentials import STAFF_DEFAULT_PASSWORD, format_registration_number, student_password
 from app.models import Role, User
-
-LEGACY_STUDENT_EMAILS = {
-    "alex.mwangi@st.uok.ac.rw": EXAMPLE_REG_NUMBER,
-}
 
 
 def migrate_schema(engine):
@@ -71,27 +67,24 @@ def backfill_notification_paths(db):
 
 def sync_student_registrations(db):
     changed = False
-    for email, reg in LEGACY_STUDENT_EMAILS.items():
-        user = db.query(User).filter(User.email == email, User.role == Role.STUDENT).first()
-        if not user:
-            continue
-        if user.registration_number != reg:
-            user.registration_number = reg
-            changed = True
-
     for user in db.query(User).filter(User.role == Role.STUDENT).all():
         if not user.registration_number:
             continue
-        expected = student_demo_password(user.registration_number)
         try:
             normalized = format_registration_number(user.registration_number)
             if user.registration_number != normalized:
                 user.registration_number = normalized
                 changed = True
         except ValueError:
-            pass
+            continue
+        expected = student_password(user.registration_number)
         if not verify_password(expected, user.password):
             user.password = hash_password(expected)
+            changed = True
+
+    for user in db.query(User).filter(User.role.in_([Role.SUPERVISOR, Role.HOD])).all():
+        if not verify_password(STAFF_DEFAULT_PASSWORD, user.password):
+            user.password = hash_password(STAFF_DEFAULT_PASSWORD)
             changed = True
 
     if changed:

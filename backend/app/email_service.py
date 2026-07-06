@@ -64,8 +64,8 @@ def notify_proposal_approved(
             f"Assigned supervisor: {supervisor_name}\n\n"
             f"Your student portal account has been created.\n"
             f"  Sign-in ID: {registration_number}\n"
-            f"  Temporary password: {student_password}\n\n"
-            f"Sign in at the student portal and change your password after first login.\n\n"
+            f"  Password: {student_password} (same as your registration number)\n\n"
+            f"Sign in at the student portal. You stay signed in for up to 48 hours.\n\n"
             f"University of Kigali — Capstone E-Supervision Portal"
         ),
     )

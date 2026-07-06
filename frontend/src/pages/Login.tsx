@@ -3,7 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { LogIn, Lock, Mail, GraduationCap, UserCog, Building2, Hash } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import UokLogo from "@/components/UokLogo";
-import { EXAMPLE_REG_NUMBER, EXAMPLE_STUDENT_PASSWORD, formatRegNumberInput } from "@/lib/regNumber";
+import { EXAMPLE_REG_NUMBER, formatRegNumberInput } from "@/lib/regNumber";
+
+const STAFF_DEFAULT_PASSWORD = "Password@123";
 import type { Role } from "@/types";
 
 const PORTAL_CONFIG: Record<
@@ -24,8 +26,8 @@ const PORTAL_CONFIG: Record<
     label: "Student",
     icon: GraduationCap,
     identifier: EXAMPLE_REG_NUMBER,
-    password: EXAMPLE_STUDENT_PASSWORD,
-    hint: "13-digit registration number: year (2023) + intake (05=May) + student number (000078).",
+    password: EXAMPLE_REG_NUMBER,
+    hint: "13-digit registration number (YYYYTTNNNNNN). Your password is the same as your reg number.",
     identifierLabel: "Registration Number",
     identifierType: "text",
     tagline: "Track your capstone project, submit work, and receive supervisor feedback.",
@@ -35,7 +37,7 @@ const PORTAL_CONFIG: Record<
     label: "Supervisor",
     icon: UserCog,
     identifier: "jean.bosco@uok.ac.rw",
-    password: "Uok@Sup2026!",
+    password: STAFF_DEFAULT_PASSWORD,
     hint: "Use your official University of Kigali email (@uok.ac.rw) only — not Gmail or other providers.",
     identifierLabel: "University Email",
     identifierType: "email",
@@ -46,8 +48,8 @@ const PORTAL_CONFIG: Record<
     label: "Head of Department",
     icon: Building2,
     identifier: "hod.it@uok.ac.rw",
-    password: "Uok@Hod2026!",
-    hint: "Use your @uok.ac.rw email. Demo HODs: hod.it@uok.ac.rw (IT), hod.law@uok.ac.rw (Law), hod.business@uok.ac.rw (Business), hod.education@uok.ac.rw (Education).",
+    password: STAFF_DEFAULT_PASSWORD,
+    hint: "Use your @uok.ac.rw email. Default password is Password@123 until you change it.",
     identifierLabel: "University Email",
     identifierType: "email",
     tagline: "Oversee department-wide supervision, assign supervisors, and monitor faculty performance.",
@@ -200,25 +202,6 @@ export default function Login({ role }: LoginProps) {
               {busy ? "Signing in..." : `Sign in to ${config.label} Portal`}
             </button>
           </form>
-
-          <p className="mt-6 text-center text-xs text-slate-500">
-            {role === "STUDENT" ? (
-              <>
-                Demo reg number:{" "}
-                <span className="font-mono text-campus-maroon">{EXAMPLE_REG_NUMBER}</span>
-                <br />
-                Demo password:{" "}
-                <span className="font-mono text-campus-maroon">{EXAMPLE_STUDENT_PASSWORD}</span>
-              </>
-            ) : (
-              <>
-                Demo password:{" "}
-                <span className="font-mono text-campus-maroon">
-                  {role === "HOD" ? "Uok@Hod2026!" : "Uok@Sup2026!"}
-                </span>
-              </>
-            )}
-          </p>
         </div>
       </div>
     </div>

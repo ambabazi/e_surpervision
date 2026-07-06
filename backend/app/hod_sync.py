@@ -1,7 +1,7 @@
-"""Ensure four department HODs, supervisors, and strong demo passwords."""
+"""Ensure four department HODs, supervisors, and default staff passwords."""
 
 from app.auth import hash_password, verify_password
-from app.demo_credentials import HOD_DEMO_PASSWORD, SUPERVISOR_DEMO_PASSWORD
+from app.demo_credentials import STAFF_DEFAULT_PASSWORD
 from app.departments import Department
 from app.models import Role, User
 
@@ -49,7 +49,7 @@ def sync_department_structure(db) -> None:
             user = User(
                 full_name=name,
                 email=email,
-                password=hash_password(HOD_DEMO_PASSWORD),
+                password=hash_password(STAFF_DEFAULT_PASSWORD),
                 role=Role.HOD,
                 department=dept_label,
                 title="Head of Department",
@@ -64,8 +64,8 @@ def sync_department_structure(db) -> None:
                 user.department = dept_label
                 user.program = dept_label
                 changed = True
-            if not verify_password(HOD_DEMO_PASSWORD, user.password):
-                user.password = hash_password(HOD_DEMO_PASSWORD)
+            if not verify_password(STAFF_DEFAULT_PASSWORD, user.password):
+                user.password = hash_password(STAFF_DEFAULT_PASSWORD)
                 changed = True
 
     for name, email, program, dept in EXTRA_SUPERVISORS:
@@ -74,7 +74,7 @@ def sync_department_structure(db) -> None:
             user = User(
                 full_name=name,
                 email=email,
-                password=hash_password(SUPERVISOR_DEMO_PASSWORD),
+                password=hash_password(STAFF_DEFAULT_PASSWORD),
                 role=Role.SUPERVISOR,
                 department=dept.value,
                 title="Dr.",
@@ -83,8 +83,8 @@ def sync_department_structure(db) -> None:
             )
             db.add(user)
             changed = True
-        elif not verify_password(SUPERVISOR_DEMO_PASSWORD, user.password):
-            user.password = hash_password(SUPERVISOR_DEMO_PASSWORD)
+        elif not verify_password(STAFF_DEFAULT_PASSWORD, user.password):
+            user.password = hash_password(STAFF_DEFAULT_PASSWORD)
             changed = True
 
     for email, dept in SUPERVISOR_DEPTS.items():
@@ -96,8 +96,8 @@ def sync_department_structure(db) -> None:
             if user.role != Role.SUPERVISOR:
                 user.role = Role.SUPERVISOR
                 changed = True
-            if not verify_password(SUPERVISOR_DEMO_PASSWORD, user.password):
-                user.password = hash_password(SUPERVISOR_DEMO_PASSWORD)
+            if not verify_password(STAFF_DEFAULT_PASSWORD, user.password):
+                user.password = hash_password(STAFF_DEFAULT_PASSWORD)
                 changed = True
 
     for proposal in db.query(TopicProposal).filter(TopicProposal.department.is_(None)).all():

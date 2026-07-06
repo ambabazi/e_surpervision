@@ -33,7 +33,7 @@ from app.schemas import (
 )
 from app.services import user_out, supervisor_load, DEFAULT_CAPACITY
 from app.similarity import score_proposal_topics
-from app.demo_credentials import format_registration_number, student_demo_password
+from app.demo_credentials import format_registration_number, student_password
 from app.email_service import notify_proposal_approved, notify_proposal_rejected
 from app.departments import Department, department_for_program, parse_department
 
@@ -244,7 +244,7 @@ def _create_student_user(
     student = User(
         full_name=full_name,
         email=email.lower(),
-        password=hash_password(student_demo_password(reg)),
+        password=hash_password(student_password(reg)),
         role=Role.STUDENT,
         program=program,
         phone=phone,
@@ -400,7 +400,7 @@ def approve_proposal(db: Session, proposal_id: int, body: ApproveProposalRequest
         registration_number=reg,
         topic_title=title,
         supervisor_name=supervisor.full_name,
-        student_password=student_demo_password(reg),
+        student_password=student_password(reg),
     )
 
     return proposal_out(db, proposal)

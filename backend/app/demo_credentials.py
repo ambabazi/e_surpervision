@@ -7,9 +7,7 @@ Registration number (13 digits): YYYYTTNNNNNN
 Example: 202305000078
 """
 
-# Staff demo passwords (uppercase, lowercase, digit, symbol)
-HOD_DEMO_PASSWORD = "Uok@Hod2026!"
-SUPERVISOR_DEMO_PASSWORD = "Uok@Sup2026!"
+STAFF_DEFAULT_PASSWORD = "Password@123"
 
 EXAMPLE_REG_NUMBER = "202305000078"
 
@@ -28,7 +26,6 @@ def format_registration_number(raw: str) -> str:
     if len(digits) == 13:
         return digits
 
-    # Legacy UOK/2023/05000078 → 202305000078
     if cleaned.startswith("UOK/"):
         parts = cleaned.split("/")
         if len(parts) >= 3 and parts[1].isdigit() and parts[2].isdigit():
@@ -48,7 +45,6 @@ def format_registration_number(raw: str) -> str:
     )
 
 
-def student_demo_password(registration_number: str) -> str:
-    """Strong student password derived from registration number."""
-    reg = format_registration_number(registration_number)
-    return f"Stu@{reg}!"
+def student_password(registration_number: str) -> str:
+    """Student portal password equals registration number."""
+    return format_registration_number(registration_number)

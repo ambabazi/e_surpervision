@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     pgdatabase: str = ""
     pgsslmode: str = ""
     jwt_secret: str = "uok-esupervision-dev-secret-key-change-me-0123456789"
-    jwt_expiration_hours: int = 24
+    jwt_expiration_hours: int = 48
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
     mail_enabled: bool = False
     smtp_host: str = ""

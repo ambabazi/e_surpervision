@@ -31,7 +31,8 @@ def authenticate_user(db: Session, *, identifier: str, password: str, portal: Ro
             raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
 
         user = db.query(User).filter(User.registration_number == reg, User.role == Role.STUDENT).first()
-        if not user or not verify_password(password, user.password):
+        pwd = format_registration_number(password) if password.replace(" ", "").isdigit() else password
+        if not user or not verify_password(pwd, user.password):
             raise HTTPException(
                 status.HTTP_401_UNAUTHORIZED,
                 "Invalid registration number or password",
