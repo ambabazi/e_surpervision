@@ -1,6 +1,6 @@
 """Demo passwords and UoK registration number format.
 
-Registration number (13 digits): YYYYTTNNNNNN
+Registration number (12 digits): YYYYTTNNNNNN
   YYYY     — year you started (e.g. 2023)
   TT       — intake term: 01 January, 05 May, 09 September
   NNNNNN   — your student number (e.g. 000078)
@@ -11,19 +11,17 @@ STAFF_DEFAULT_PASSWORD = "Password@123"
 
 EXAMPLE_REG_NUMBER = "202305000078"
 
-INTAKE_LABELS = {
-    "01": "January",
-    "05": "May",
-    "09": "September",
-}
-
 
 def format_registration_number(raw: str) -> str:
-    """Normalize input to 13-digit UoK registration number."""
+    """Normalize input to 12-digit UoK registration number."""
     cleaned = raw.strip().upper()
     digits = "".join(c for c in raw if c.isdigit())
 
-    if len(digits) == 13:
+    # Fix legacy 14-digit values from an earlier bug (leading 0 padding)
+    if len(digits) == 13 and digits.startswith("0"):
+        digits = digits[1:]
+
+    if len(digits) == 12:
         return digits
 
     if cleaned.startswith("UOK/"):
@@ -34,14 +32,11 @@ def format_registration_number(raw: str) -> str:
             intake = "05"
             return f"{year}{intake}{serial}"
 
-    if len(digits) == 12:
-        return f"0{digits}"
-
-    if len(digits) > 13:
-        return digits[-13:]
+    if len(digits) == 13:
+        return digits[-12:]
 
     raise ValueError(
-        "Registration number must be 13 digits (YYYYTTNNNNNN), e.g. 202305000078"
+        "Registration number must be 12 digits (YYYYTTNNNNNN), e.g. 202305000078"
     )
 
 

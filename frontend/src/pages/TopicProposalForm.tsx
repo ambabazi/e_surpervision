@@ -196,7 +196,7 @@ export default function TopicProposalForm() {
                   placeholder="202305000078"
                   value={form.registrationNumber}
                   onChange={(e) => set("registrationNumber", formatRegNumberInput(e.target.value))}
-                  maxLength={13}
+                  maxLength={12}
                   inputMode="numeric"
                 />
               </div>

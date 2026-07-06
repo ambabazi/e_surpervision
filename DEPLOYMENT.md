@@ -151,7 +151,7 @@ Health check: `https://YOUR-API.onrender.com/api/health`
 
 ## Step 4 — Verify
 
-- Student login: `UOK/2023/05000090` / `Stu@202305000090!`
+- Student login: `202305000078` / `202305000078`
 - IT HOD: `hod.it@uok.ac.rw` / `Uok@Hod2026!`
 - Supervisor: `jean.bosco@uok.ac.rw` / `Uok@Sup2026!`
 - Submit work as student → supervisor reviews → student Gmail receives progress email (if `MAIL_ENABLED=true`)

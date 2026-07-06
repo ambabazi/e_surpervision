@@ -27,7 +27,7 @@ const PORTAL_CONFIG: Record<
     icon: GraduationCap,
     identifier: EXAMPLE_REG_NUMBER,
     password: EXAMPLE_REG_NUMBER,
-    hint: "13-digit registration number (YYYYTTNNNNNN). Your password is the same as your reg number.",
+    hint: "12-digit registration number (YYYYTTNNNNNN). Your password is the same as your reg number.",
     identifierLabel: "Registration Number",
     identifierType: "text",
     tagline: "Track your capstone project, submit work, and receive supervisor feedback.",
@@ -167,7 +167,7 @@ export default function Login({ role }: LoginProps) {
                   required
                   autoComplete={role === "STUDENT" ? "username" : "email"}
                   placeholder={role === "STUDENT" ? "202305000078" : "name@uok.ac.rw"}
-                  maxLength={role === "STUDENT" ? 13 : undefined}
+                  maxLength={role === "STUDENT" ? 12 : undefined}
                   inputMode={role === "STUDENT" ? "numeric" : undefined}
                 />
               </div>

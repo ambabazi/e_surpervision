@@ -410,7 +410,7 @@ Reload anytime: `cd backend && python reseed_db.py`
 ### Example student
 | Registration | Password | Gmail (progress emails) |
 | ------------ | -------- | ----------------------- |
-| `UOK/2023/05000090` | `Stu@202305000090!` | `aggie.moraa.capstone@gmail.com` |
+| `202305000078` | `202305000078` | `aggie.moraa.capstone@gmail.com` |
 
 ### Supervisors (password `Uok@Sup2026!`)
 | Email |
