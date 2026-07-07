@@ -219,9 +219,9 @@ Client                    Backend
 
 | Role        | Login with              | Password (demo)        |
 | ----------- | ----------------------- | ---------------------- |
-| Student     | Registration number     | Same as reg number, e.g. `202305000078` |
-| Supervisor  | `@uok.ac.rw` email      | `Uok@Sup2026!`         |
-| HOD         | `@uok.ac.rw` email      | `Uok@Hod2026!`         |
+| Student     | 12-digit registration number | Same as reg number, e.g. `202305000078` |
+| Supervisor  | `@uok.ac.rw` email      | `Password@123`         |
+| HOD         | `@uok.ac.rw` email      | `Password@123`         |
 
 Students and supervisors **cannot self-register**. HODs create student accounts after approving topic proposals.
 
@@ -230,11 +230,11 @@ Students and supervisors **cannot self-register**. HODs create student accounts 
 | Layer | Implementation |
 | ----- | -------------- |
 | Password storage | **bcrypt** hashing (never plain text) |
-| Session tokens | **JWT** signed with `JWT_SECRET` (default 24h expiry) |
+| Session tokens | **JWT** signed with `JWT_SECRET` (default **48h** expiry) |
 | Role enforcement | Every protected route checks `STUDENT` / `SUPERVISOR` / `HOD` |
 | Staff email policy | Supervisors/HOD must use `@uok.ac.rw` emails |
 | Portal separation | Login includes `portal` — student token cannot access supervisor routes |
-| File uploads | PDF/Word only; stored outside web root; download requires auth |
+| File uploads | PDF/Word only; stored in `backend/uploads/`; download requires auth and supervisor/student ownership |
 | CORS | Restricted to configured frontend origins |
 | SQL injection | SQLAlchemy ORM (parameterised queries) |
 | Proposal routing | Students only see supervisors in their department with open capacity |
@@ -252,139 +252,22 @@ Students and supervisors **cannot self-register**. HODs create student accounts 
 
 ## Database schema & relationships
 
-### Entity-relationship overview
+Full table definitions, column lists, enums, ERD, FK map, and API flows: **[DATABASE.md](DATABASE.md)**  
+SQL setup (pgAdmin, Neon, reseed): **[database/README.md](database/README.md)**
+
+The application uses **8 PostgreSQL tables**: `users`, `projects`, `tasks`, `submissions`, `feedback`, `notifications`, `topic_proposals`, `supervisor_student_requests`.
+
+Quick overview:
 
 ```mermaid
 erDiagram
-    users ||--o{ projects : "student_id"
-    users ||--o{ projects : "supervisor_id"
-    users ||--o{ notifications : "user_id"
-    users ||--o{ feedback : "author_id"
-    users ||--o{ supervisor_student_requests : "supervisor_id"
-
-    projects ||--o{ tasks : "project_id"
-    projects ||--o{ submissions : "project_id"
-    projects ||--o{ feedback : "project_id"
-
-    tasks ||--o{ submissions : "task_id"
-    submissions ||--o{ feedback : "submission_id"
-
-    users ||--o{ topic_proposals : "supervisor_choice_1"
-    users ||--o{ topic_proposals : "supervisor_choice_2"
-    users ||--o{ topic_proposals : "assigned_supervisor"
-    users ||--o{ topic_proposals : "student_user_id"
-
-    users {
-        int id PK
-        string email UK
-        string registration_number UK
-        enum role "STUDENT|SUPERVISOR|HOD"
-        string department "IT|LAW|BUSINESS|EDUCATION"
-        string password "bcrypt hash"
-    }
-
-    projects {
-        int id PK
-        int student_id FK
-        int supervisor_id FK
-        enum status
-        int progress
-    }
-
-    topic_proposals {
-        int id PK
-        string registration_number
-        string department
-        enum status "PENDING|APPROVED|REJECTED"
-        int supervisor_choice_1_id FK
-        int supervisor_choice_2_id FK
-        int assigned_supervisor_id FK
-        int student_user_id FK
-    }
+    users ||--o{ projects : supervises_or_owns
+    projects ||--o{ submissions : contains
+    projects ||--o{ tasks : contains
+    users ||--o{ topic_proposals : applies
 ```
 
-### Tables explained
-
-#### `users`
-Central account table for students, supervisors, and HODs.
-
-| Column | Purpose |
-| ------ | ------- |
-| `role` | `STUDENT`, `SUPERVISOR`, or `HOD` |
-| `department` | `IT`, `LAW`, `BUSINESS`, or `EDUCATION` — used to route proposals and filter dashboards |
-| `registration_number` | Student login ID (unique) |
-| `email` | Staff login; also used for student contact |
-| `password` | bcrypt hash |
-
-#### `projects`
-One capstone project per assigned student.
-
-| Relationship | Meaning |
-| ------------ | ------- |
-| `student_id → users` | The student owner |
-| `supervisor_id → users` | Assigned supervisor |
-
-#### `tasks`
-Milestones and work items belonging to a project.
-
-| Relationship | Meaning |
-| ------------ | ------- |
-| `project_id → projects` | Parent project |
-
-#### `submissions`
-Files (PDF/Word) uploaded by students for supervisor review.
-
-| Relationship | Meaning |
-| ------------ | ------- |
-| `project_id → projects` | Which project |
-| `task_id → tasks` | Optional linked milestone |
-
-#### `feedback`
-Written supervisor comments on submissions or general project feedback.
-
-| Relationship | Meaning |
-| ------------ | ------- |
-| `author_id → users` | Supervisor who wrote it |
-| `submission_id → submissions` | Optional linked submission |
-
-#### `notifications`
-In-app alerts (deadlines, new submissions, proposal updates).
-
-| Relationship | Meaning |
-| ------------ | ------- |
-| `user_id → users` | Recipient |
-| `action_path` | Frontend route when clicked |
-
-#### `topic_proposals`
-Public topic applications **before** a student account exists.
-
-| Column | Purpose |
-| ------ | ------- |
-| `department` | Routes to the correct HOD (`IT`, `LAW`, etc.) |
-| `topic_1..3`, `abstract_1..3` | Three proposed topics |
-| `supervisor_choice_1/2_id` | Ranked supervisor preferences |
-| `status` | `PENDING` → HOD approves or rejects |
-| `student_user_id` | Set when HOD approves and creates the portal account |
-
-**Workflow:** Applicant submits → department HOD reviews (similarity vs active projects) → approve creates `users` + `projects` row → student can log in.
-
-#### `supervisor_student_requests`
-Supervisors asking their department HOD for an additional student.
-
-| Relationship | Meaning |
-| ------------ | ------- |
-| `supervisor_id → users` | Requesting supervisor |
-
-### Enum values (stored in PostgreSQL)
-
-| Enum | Values |
-| ---- | ------ |
-| Role | `STUDENT`, `SUPERVISOR`, `HOD` |
-| ProjectStatus | `PROPOSAL`, `IN_PROGRESS`, `UNDER_REVIEW`, `REVISION`, `COMPLETED`, `ON_HOLD` |
-| TaskStatus | `UPCOMING`, `IN_PROGRESS`, `COMPLETED`, `OVERDUE` |
-| SubmissionStatus | `SUBMITTED`, `UNDER_REVIEW`, `APPROVED`, `NEEDS_REVISION` |
-| ProposalStatus | `PENDING`, `APPROVED`, `REJECTED` |
-| NotificationType | `DEADLINE`, `FEEDBACK`, `ASSIGNMENT`, `SYSTEM`, `APPROVAL` |
+**Submission rules:** students upload between **08:00–17:00** (Rwanda time). Supervisors see pending reviews sorted by **submission hour** — morning uploads appear before afternoon ones.
 
 ---
 
@@ -396,8 +279,12 @@ Copy `backend/.env.example` to `backend/.env`:
 | -------- | ----------- | ------- |
 | `DATABASE_URL` | SQLAlchemy connection string | `postgresql://postgres:YOUR_PASSWORD@localhost:5432/e_supervision` |
 | `JWT_SECRET` | Signs auth tokens | Long random string |
-| `JWT_EXPIRATION_HOURS` | Token lifetime | `24` |
-| `CORS_ORIGINS` | Allowed frontend URLs | `http://localhost:5173` |
+| `JWT_EXPIRATION_HOURS` | Token lifetime | `48` |
+| `CORS_ORIGINS` | Allowed frontend URLs (no path) | `http://localhost:5173` |
+| `SUBMISSION_WINDOW_ENABLED` | Enforce 08:00–17:00 upload window | `true` |
+| `SUBMISSION_TIMEZONE` | Window timezone | `Africa/Kigali` |
+| `SUBMISSION_WINDOW_START_HOUR` | First allowed hour | `8` |
+| `SUBMISSION_WINDOW_END_HOUR` | Last allowed hour (exclusive) | `17` |
 | `MAIL_ENABLED` | Send real emails | `false` (dev) / `true` (prod) |
 | `SMTP_*` | Email server settings | Your provider's SMTP |
 
@@ -405,25 +292,38 @@ Copy `backend/.env.example` to `backend/.env`:
 
 ## Demo accounts
 
-Reload anytime: `cd backend && python reseed_db.py`
+Reload anytime:
 
-### Example student
-| Registration | Password | Gmail (progress emails) |
-| ------------ | -------- | ----------------------- |
-| `202305000078` | `202305000078` | `aggie.moraa.capstone@gmail.com` |
+```bash
+cd backend && python reseed_db.py
+```
 
-### Supervisors (password `Uok@Sup2026!`)
-| Email |
-| ----- |
-| `jean.bosco@uok.ac.rw` |
-| `sarah.mukandoli@uok.ac.rw` |
-| `eric.habimana@uok.ac.rw` |
-| `it.nshuti@uok.ac.rw` |
-| `finance.uwase@uok.ac.rw` |
-| `law.kamanzi@uok.ac.rw` |
-| `education.niyonsenga@uok.ac.rw` |
+### Featured student
+| Registration | Password | Notes |
+| ------------ | -------- | ----- |
+| `202305000078` | `202305000078` | Aggie Moraa — IT, supervisor Dr. Jean Bosco |
 
-### Heads of Department (password `Uok@Hod2026!`)
+### Unassigned students (HOD assign testing)
+| Registration | Password | Department |
+| ------------ | -------- | ---------- |
+| `202205000210` | `202205000210` | IT — Aline Uwimana |
+| `202205000215` | `202205000215` | IT — Kevin Mugisha |
+
+### Supervisors (password `Password@123`)
+| Email | Department |
+| ----- | ---------- |
+| `jean.bosco@uok.ac.rw` | IT |
+| `sarah.mukandoli@uok.ac.rw` | IT |
+| `eric.habimana@uok.ac.rw` | IT |
+| `it.nshuti@uok.ac.rw` | IT |
+| `finance.uwase@uok.ac.rw` | Business |
+| `business.mugisha@uok.ac.rw` | Business |
+| `law.kamanzi@uok.ac.rw` | Law |
+| `law.uwase@uok.ac.rw` | Law |
+| `education.niyonsenga@uok.ac.rw` | Education |
+| `education.mutoni@uok.ac.rw` | Education |
+
+### Heads of Department (password `Password@123`)
 | Department | Email |
 | ---------- | ----- |
 | IT | `hod.it@uok.ac.rw` |
@@ -441,17 +341,19 @@ Reload anytime: `cd backend && python reseed_db.py`
 - Email notification when approved or rejected
 
 ### Student
-- Dashboard, tasks, submissions (PDF/Word), feedback, progress tracker
+- Dashboard, tasks, submissions (PDF/Word, **08:00–17:00 window**), feedback, progress tracker
 
 ### Supervisor
-- Review submissions with countdown reminders
+- **Open student documents** from the reviews page (authenticated download)
+- Review queue sorted by **submission hour** (morning before afternoon)
+- **7-day review countdown** on dashboard for each pending submission
 - Request additional students from HOD
-- Department-scoped workload
 
 ### HOD (per department)
 - Topic applicant pipeline with similarity scores vs active projects
-- Approve & approve account for student
-- Create students manually, assign supervisors
+- Approve proposal → creates student account + project
+- **Assign supervisor immediately** to unassigned students (`/hod/students`)
+- Create students manually
 - Department dashboard and analytics
 
 ---
@@ -464,6 +366,8 @@ Reload anytime: `cd backend && python reseed_db.py`
 | GET | `/api/public/programs` | Public |
 | GET | `/api/public/supervisors?department=IT` | Public |
 | POST | `/api/public/topic-proposals` | Public |
+| GET | `/api/public/submission-window` | Public |
+| POST | `/api/hod/students/{id}/assign-supervisor` | HOD |
 | GET | `/api/student/*` | Student |
 | GET | `/api/supervisor/*` | Supervisor |
 | GET | `/api/hod/*` | HOD |

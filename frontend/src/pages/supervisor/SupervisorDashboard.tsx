@@ -13,16 +13,13 @@ import {
   StatCard,
   StatusBadge,
 } from "@/components/ui";
-import { timeAgo } from "@/lib/format";
+import {
+  formatCountdown,
+  formatDateTime,
+  reviewCountdownTone,
+  timeAgo,
+} from "@/lib/format";
 import type { SupervisorDashboard as Dash } from "@/types";
-
-function formatCountdown(hours: number) {
-  if (hours <= 0) return "Deadline passed";
-  const d = Math.floor(hours / 24);
-  const h = hours % 24;
-  if (d > 0) return `${d}d ${h}h remaining`;
-  return `${h}h remaining`;
-}
 
 export default function SupervisorDashboard() {
   const { data, loading, error } = useApi<Dash>("/supervisor/dashboard");
@@ -52,7 +49,7 @@ export default function SupervisorDashboard() {
           Academic Supervision Overview
         </h1>
         <p className="text-sm text-slate-500">
-          Welcome, {data.supervisor.fullName}. Here is your supervision workload at a glance.
+          Welcome, {data.supervisor.fullName}. Pending reviews are sorted by submission hour (morning first).
         </p>
       </div>
 
@@ -82,7 +79,12 @@ export default function SupervisorDashboard() {
               <EmptyState message="No submissions awaiting review." />
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
-                {data.pendingThesisReviews.slice(0, 4).map((s) => (
+                {data.pendingThesisReviews.slice(0, 4).map((s) => {
+                  const tone = reviewCountdownTone(s.isOverdue, s.hoursUntilDeadline);
+                  const countdownText = s.isOverdue
+                    ? `Overdue — ${s.hoursWaiting}h waiting for review`
+                    : formatCountdown(s.hoursUntilDeadline);
+                  return (
                   <div key={s.id} className="rounded-xl border border-slate-100 p-4">
                     <div className="flex items-center gap-3">
                       <Avatar name={s.student?.fullName} size={36} />
@@ -90,7 +92,9 @@ export default function SupervisorDashboard() {
                         <p className="truncate text-sm font-semibold text-slate-800">
                           {s.student?.fullName || "Student"}
                         </p>
-                        <p className="text-xs text-slate-400">{timeAgo(s.submittedAt)}</p>
+                        <p className="text-xs text-slate-500">
+                          Submitted {timeAgo(s.submittedAt)} · {formatDateTime(s.submittedAt)}
+                        </p>
                       </div>
                     </div>
                     <p className="mt-3 flex items-center gap-2 text-sm text-slate-600">
@@ -98,24 +102,23 @@ export default function SupervisorDashboard() {
                       {s.title}
                     </p>
                     <div
-                      className={`mt-2 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold ${
-                        s.isOverdue
-                          ? "bg-crimson-50 text-crimson-700"
-                          : s.hoursUntilDeadline <= 48
-                            ? "bg-gold-50 text-gold-800"
-                            : "bg-slate-50 text-slate-600"
-                      }`}
+                      className={`mt-3 rounded-xl px-4 py-3 text-center ${tone.box} ${tone.text}`}
                     >
-                      <Clock size={12} />
-                      {s.isOverdue
-                        ? `Overdue — waiting ${s.hoursWaiting}h for your review`
-                        : `Submitted — review within ${formatCountdown(s.hoursUntilDeadline)}`}
+                      <Clock size={22} className="mx-auto mb-1 opacity-80" />
+                      <p className="text-lg font-extrabold leading-tight">
+                        {s.isOverdue ? "Review overdue" : "Time left to review"}
+                      </p>
+                      <p className="mt-1 text-2xl font-black tracking-tight">{countdownText}</p>
                     </div>
+                    {s.priorityLabel && (
+                      <p className="mt-2 text-center text-xs font-medium text-slate-500">{s.priorityLabel}</p>
+                    )}
                     <Link to="/supervisor/reviews" className="btn-outline mt-3 w-full !py-2 text-xs">
                       Review now
                     </Link>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </Card>

@@ -76,6 +76,8 @@ export interface PendingReview extends Submission {
   reviewDeadlineHours: number;
   hoursUntilDeadline: number;
   isOverdue: boolean;
+  submittedHour?: number;
+  priorityLabel?: string;
 }
 
 export interface Feedback {
@@ -152,6 +154,20 @@ export interface SupervisorWorkload {
   load: number;
   capacity: number;
   status: string;
+}
+
+export interface HodStudentRow {
+  id: number;
+  fullName: string;
+  email: string;
+  registrationNumber?: string;
+  program?: string;
+  department?: string;
+  phone?: string;
+  isAssigned: boolean;
+  projectTitle?: string;
+  projectStatus?: ProjectStatus;
+  supervisor?: User;
 }
 
 export interface HodDashboard {

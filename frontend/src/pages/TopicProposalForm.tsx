@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Send, GraduationCap, BookOpen, Users } from "lucide-react";
 import { api } from "@/lib/api";
-import { formatRegNumberInput } from "@/lib/regNumber";
+import { formatRegNumberInput, EXAMPLE_REG_NUMBER } from "@/lib/regNumber";
+import { parseApiError } from "@/lib/errors";
 import UokLogo from "@/components/UokLogo";
 import { Toast } from "@/components/Toast";
 import type { DeptPrograms, PublicSupervisor } from "@/types";
@@ -71,11 +72,26 @@ export default function TopicProposalForm() {
       setToast({ kind: "error", message: "Please choose two different supervisors." });
       return;
     }
+    if (form.registrationNumber.length !== 12) {
+      setToast({
+        kind: "error",
+        message: `Registration number must be 12 digits (e.g. ${EXAMPLE_REG_NUMBER}).`,
+      });
+      return;
+    }
+    if (!form.email.trim()) {
+      setToast({ kind: "error", message: "Email is required." });
+      return;
+    }
     if (supervisors.length < 2) {
       setToast({
         kind: "error",
         message: "Not enough supervisors with open spots in your department. Contact the HOD office.",
       });
+      return;
+    }
+    if (!form.supervisorChoice1Id || !form.supervisorChoice2Id) {
+      setToast({ kind: "error", message: "Please select both preferred supervisors." });
       return;
     }
     setBusy(true);
@@ -115,10 +131,10 @@ export default function TopicProposalForm() {
         supervisorChoice2Id: "",
       }));
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        "Submission failed. Please try again.";
-      setToast({ kind: "error", message: msg });
+      setToast({
+        kind: "error",
+        message: parseApiError(err, "Submission failed. Please try again."),
+      });
     } finally {
       setBusy(false);
     }
@@ -161,7 +177,7 @@ export default function TopicProposalForm() {
           <Link to="/login" className="inline-block">
             <UokLogo variant="light" />
           </Link>
-          <h1 className="mt-6 text-2xl font-extrabold">Capstone Topic Proposal</h1>
+          <h1 className="mt-6 text-2xl font-extrabold">Topic Proposal</h1>
           <p className="mt-2 text-sm text-white/80">
             Submit three proposed topics with abstracts and your preferred supervisors. Your
             department Head will review your application.

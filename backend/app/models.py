@@ -1,6 +1,8 @@
 import enum
 from datetime import date, datetime
 
+from app.datetime_utils import utc_now
+
 from sqlalchemy import Boolean, Column, Date, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
@@ -78,7 +80,7 @@ class User(Base):
     bio = Column(Text)
     active = Column(Boolean, default=True)
     registration_number = Column(String, unique=True, index=True, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
 
 class Project(Base):
@@ -125,7 +127,7 @@ class Submission(Base):
     file_url = Column(String)
     file_name = Column(String)
     status = Column(Enum(SubmissionStatus), nullable=False)
-    submitted_at = Column(DateTime, default=datetime.utcnow)
+    submitted_at = Column(DateTime, default=utc_now)
     project_id = Column(Integer, ForeignKey("projects.id"))
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True)
 
@@ -139,7 +141,7 @@ class Feedback(Base):
     id = Column(Integer, primary_key=True)
     title = Column(String)
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
     project_id = Column(Integer, ForeignKey("projects.id"))
     author_id = Column(Integer, ForeignKey("users.id"))
     submission_id = Column(Integer, ForeignKey("submissions.id"), nullable=True)
@@ -159,7 +161,7 @@ class Notification(Base):
     severity = Column(Enum(Priority))
     read = Column(Boolean, default=False)
     action_path = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
     user_id = Column(Integer, ForeignKey("users.id"))
 
     user = relationship("User")
@@ -188,7 +190,7 @@ class TopicProposal(Base):
     rejection_reason = Column(Text, nullable=True)
     assigned_supervisor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     student_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
     supervisor_choice_1 = relationship("User", foreign_keys=[supervisor_choice_1_id])
     supervisor_choice_2 = relationship("User", foreign_keys=[supervisor_choice_2_id])
@@ -203,6 +205,6 @@ class SupervisorStudentRequest(Base):
     message = Column(Text, nullable=False)
     status = Column(Enum(RequestStatus), default=RequestStatus.PENDING)
     hod_response = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
     supervisor = relationship("User")

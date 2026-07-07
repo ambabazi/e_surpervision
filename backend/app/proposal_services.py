@@ -1,5 +1,7 @@
 from datetime import date, datetime, timedelta
 
+from app.datetime_utils import ensure_utc, to_kigali, utc_now
+
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
@@ -36,6 +38,7 @@ from app.similarity import score_proposal_topics
 from app.demo_credentials import format_registration_number, student_password
 from app.email_service import notify_proposal_approved, notify_proposal_rejected
 from app.departments import Department, department_for_program, parse_department
+from app.submission_policy import priority_label
 
 REVIEW_DEADLINE_HOURS = 168  # 7 days
 
@@ -148,7 +151,10 @@ def create_topic_proposal(db: Session, body: TopicProposalCreateRequest) -> Topi
     if body.supervisor_choice_1_id == body.supervisor_choice_2_id:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Please choose two different supervisors")
 
-    reg = _normalize_reg(body.registration_number)
+    try:
+        reg = _normalize_reg(body.registration_number)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
     _ensure_reg_available_for_proposal(db, reg)
 
     try:
@@ -470,6 +476,80 @@ def hod_create_student(db: Session, body: CreateStudentRequest) -> UserOut:
     return user_out(student)
 
 
+def hod_assign_student_supervisor(
+    db: Session,
+    hod: User,
+    student_id: int,
+    *,
+    supervisor_id: int,
+    project_title: str | None = None,
+    project_description: str | None = None,
+) -> UserOut:
+    student = db.query(User).filter(User.id == student_id, User.role == Role.STUDENT).first()
+    if not student:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Student not found")
+
+    if hod.department and student.department != hod.department:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "This student is not in your department")
+
+    supervisor = db.query(User).filter(User.id == supervisor_id, User.role == Role.SUPERVISOR).first()
+    if not supervisor:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Supervisor not found")
+    if hod.department and supervisor.department != hod.department:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Supervisor must be in your department")
+    if supervisor_load(db, supervisor.id) >= DEFAULT_CAPACITY:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{supervisor.full_name} has no available supervision spots")
+
+    project = db.query(Project).filter(Project.student_id == student.id).first()
+    title = (project_title or student.program or "Capstone Project").strip()
+    description = project_description.strip() if project_description else None
+
+    if project:
+        if project.supervisor_id:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Student already has a supervisor assigned")
+        project.supervisor_id = supervisor.id
+        if not project.title:
+            project.title = title
+    else:
+        db.add(
+            Project(
+                title=title,
+                description=description or f"Capstone project for {student.full_name}.",
+                current_phase="Proposal",
+                status=ProjectStatus.PROPOSAL,
+                progress=5,
+                start_date=date.today(),
+                due_date=date.today() + timedelta(days=180),
+                student_id=student.id,
+                supervisor_id=supervisor.id,
+            )
+        )
+
+    db.add(
+        Notification(
+            title="New student assigned",
+            message=f"{student.full_name} has been assigned to you for capstone supervision.",
+            type=NotificationType.ASSIGNMENT,
+            severity=Priority.MEDIUM,
+            user_id=supervisor.id,
+            action_path="/supervisor/students",
+        )
+    )
+    db.add(
+        Notification(
+            title="Supervisor Assigned",
+            message=f"You have been assigned to {supervisor.full_name} for capstone supervision.",
+            type=NotificationType.ASSIGNMENT,
+            severity=Priority.MEDIUM,
+            user_id=student.id,
+            action_path="/student",
+        )
+    )
+    db.commit()
+    db.refresh(student)
+    return user_out(student)
+
+
 def create_supervisor_request(db: Session, supervisor: User, message: str) -> SupervisorStudentRequestOut:
     if not message.strip():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Please provide a message for the HOD")
@@ -590,10 +670,16 @@ def pending_review_out(submission, existing=None):
     hours_until = REVIEW_DEADLINE_HOURS
     is_overdue = False
     if submission.submitted_at:
-        elapsed = datetime.utcnow() - submission.submitted_at
+        now = utc_now()
+        submitted = ensure_utc(submission.submitted_at)
+        elapsed = now - submitted
         hours_waiting = max(0, int(elapsed.total_seconds() // 3600))
         hours_until = max(0, REVIEW_DEADLINE_HOURS - hours_waiting)
         is_overdue = hours_waiting >= REVIEW_DEADLINE_HOURS
+        kigali_submitted = to_kigali(submitted)
+        submitted_hour = kigali_submitted.hour if kigali_submitted else None
+    else:
+        submitted_hour = None
 
     return PendingReviewOut(
         **base.model_dump(),
@@ -601,4 +687,6 @@ def pending_review_out(submission, existing=None):
         review_deadline_hours=REVIEW_DEADLINE_HOURS,
         hours_until_deadline=hours_until,
         is_overdue=is_overdue,
+        submitted_hour=submitted_hour,
+        priority_label=priority_label(submission.submitted_at),
     )

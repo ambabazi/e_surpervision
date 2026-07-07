@@ -1,6 +1,8 @@
 from datetime import date
 from typing import Optional
 
+from app.datetime_utils import utc_now
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session, joinedload
@@ -25,6 +27,10 @@ from app.models import (
     Task,
     TaskStatus,
     User,
+)
+from app.submission_policy import (
+    sort_submissions_by_priority,
+    validate_submission_window,
 )
 from app.schemas import (
     FeedbackOut,
@@ -259,12 +265,11 @@ def supervisor_dashboard(db: Session, supervisor: User) -> SupervisorDashboardOu
     active = sum(1 for p in projects if p.status != ProjectStatus.COMPLETED)
     completed = sum(1 for p in projects if p.status == ProjectStatus.COMPLETED)
 
-    pending = (
+    pending = sort_submissions_by_priority(
         db.query(Submission)
         .join(Project)
         .options(joinedload(Submission.project).joinedload(Project.student))
         .filter(Project.supervisor_id == supervisor.id, Submission.status == SubmissionStatus.SUBMITTED)
-        .order_by(Submission.submitted_at.desc())
         .all()
     )
     alerts = (
@@ -296,6 +301,42 @@ def supervisor_dashboard(db: Session, supervisor: User) -> SupervisorDashboardOu
         critical_alerts=[notification_out(a) for a in alerts if a],
         research_pipeline=pipeline,
     )
+
+
+def hod_students_list(db: Session, hod: User) -> list:
+    from app.schemas import HodStudentRowOut
+
+    dept = hod.department
+    q = db.query(User).filter(User.role == Role.STUDENT)
+    if dept:
+        q = q.filter(User.department == dept)
+    students = q.order_by(User.full_name.asc()).all()
+
+    rows = []
+    for st in students:
+        project = (
+            db.query(Project)
+            .options(joinedload(Project.supervisor))
+            .filter(Project.student_id == st.id)
+            .first()
+        )
+        assigned = project is not None and project.supervisor_id is not None
+        rows.append(
+            HodStudentRowOut(
+                id=st.id,
+                full_name=st.full_name,
+                email=st.email,
+                registration_number=st.registration_number,
+                program=st.program,
+                department=st.department,
+                phone=st.phone,
+                is_assigned=assigned,
+                project_title=project.title if project else None,
+                project_status=project.status if project else None,
+                supervisor=user_out(project.supervisor) if project and project.supervisor else None,
+            )
+        )
+    return rows
 
 
 def hod_dashboard(db: Session, hod: User) -> HodDashboardOut:
@@ -374,6 +415,8 @@ def hod_dashboard(db: Session, hod: User) -> HodDashboardOut:
 
 
 def create_submission(db: Session, student: User, *, title: str, notes: str | None, file_url: str | None, file_name: str | None, task_id: int | None) -> SubmissionOut:
+    validate_submission_window()
+
     if not file_name:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "A PDF or Word document is required.")
 
@@ -399,6 +442,7 @@ def create_submission(db: Session, student: User, *, title: str, notes: str | No
         status=SubmissionStatus.SUBMITTED,
         project_id=project.id,
         task_id=task.id if task else None,
+        submitted_at=utc_now(),
     )
     db.add(submission)
     db.flush()

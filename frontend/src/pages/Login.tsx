@@ -1,12 +1,22 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { LogIn, Lock, Mail, GraduationCap, UserCog, Building2, Hash } from "lucide-react";
+import {
+  LogIn,
+  Lock,
+  Mail,
+  GraduationCap,
+  UserCog,
+  Building2,
+  Hash,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import UokLogo from "@/components/UokLogo";
 import { EXAMPLE_REG_NUMBER, formatRegNumberInput } from "@/lib/regNumber";
+import type { Role } from "@/types";
 
 const STAFF_DEFAULT_PASSWORD = "Password@123";
-import type { Role } from "@/types";
 
 const PORTAL_CONFIG: Record<
   Role,
@@ -68,6 +78,7 @@ export default function Login({ role }: LoginProps) {
   const navigate = useNavigate();
   const [identifier, setIdentifier] = useState(config.identifier);
   const [password, setPassword] = useState(config.password);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -85,14 +96,42 @@ export default function Login({ role }: LoginProps) {
     }
 
     try {
-      const user = await login(identifier.trim(), password, role);
+      const user = await login(identifier.trim(), password.trim(), role);
       if (user.role !== role) {
         setError(`This account is not a ${config.label.toLowerCase()} account. Use the correct portal.`);
         return;
       }
       navigate(config.home);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || "Invalid credentials");
+    } catch (err: unknown) {
+      const ax = err as {
+        response?: {
+          status?: number;
+          data?: { message?: string; detail?: string | { msg: string }[] };
+        };
+      };
+      if (!ax.response) {
+        setError(
+          "Cannot reach the server. Check CORS on Render and that VITE_API_URL ends with /api (e.g. https://your-app.onrender.com/api).",
+        );
+        return;
+      }
+      const { status, data } = ax.response;
+      if (status === 404) {
+        setError(
+          "API not found. Set VITE_API_URL to your Render URL with /api at the end, then redeploy Vercel.",
+        );
+        return;
+      }
+      const detail = data?.detail;
+      if (typeof detail === "string") {
+        setError(detail);
+        return;
+      }
+      if (Array.isArray(detail)) {
+        setError(detail.map((d) => d.msg).join(", "));
+        return;
+      }
+      setError(data?.message || "Invalid credentials");
     } finally {
       setBusy(false);
     }
@@ -182,12 +221,21 @@ export default function Login({ role }: LoginProps) {
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                 />
                 <input
-                  type="password"
-                  className="input pl-9"
+                  type={showPassword ? "text" : "password"}
+                  className="input pl-9 pr-10"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  autoComplete="current-password"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
             </div>
 
@@ -217,7 +265,7 @@ export function LoginPortalPicker() {
       </div>
       <div className="relative flex flex-col items-center">
         <UokLogo variant="light" />
-        <h1 className="mt-6 text-2xl font-extrabold text-white">Capstone E-Supervision Portal</h1>
+        <h1 className="mt-6 text-2xl font-extrabold text-white">E-Supervision Portal</h1>
         <p className="mt-2 text-sm text-white/70">Choose your portal to sign in</p>
         <div className="mt-8 grid w-full max-w-md gap-3">
           {(Object.keys(PORTAL_CONFIG) as Role[]).map((role) => {

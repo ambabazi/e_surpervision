@@ -17,7 +17,7 @@ import {
   StatCard,
   StatusBadge,
 } from "@/components/ui";
-import { timeAgo } from "@/lib/format";
+import { timeAgo, formatDateTime } from "@/lib/format";
 import type { HodProposalPipeline, PublicSupervisor, ProposalStatus, TopicProposal } from "@/types";
 
 const FILTERS: { label: string; value: ProposalStatus | "ALL" }[] = [
@@ -103,7 +103,7 @@ export default function HodProposals() {
                       <Hash size={13} /> {p.registrationNumber}
                     </p>
                     <p className="text-sm text-slate-500">
-                      {p.program} · {p.email} · {timeAgo(p.createdAt)}
+                      {p.program} · {p.email} · {timeAgo(p.createdAt)} · {formatDateTime(p.createdAt)}
                     </p>
                     <p className="mt-1 text-xs text-slate-400">
                       Supervisors: {p.supervisorChoice1?.fullName} (1st),{" "}
@@ -152,7 +152,7 @@ export default function HodProposals() {
                 {p.status === "PENDING" && (
                   <div className="mt-4 flex flex-wrap gap-2">
                     <button className="btn-primary !py-2 text-xs" onClick={() => setActive(p)}>
-                      Approve & approve account for student
+                      Assign & approve
                     </button>
                     <button
                       className="btn-outline !py-2 text-xs text-crimson-700"
@@ -206,8 +206,7 @@ export default function HodProposals() {
                 {pendingApplicants.length} applicant(s) awaiting supervisor assignment
               </p>
               <p className="mt-1 text-xs text-gold-800">
-                Approve a proposal to create their portal and assign a supervisor. Students are
-                emailed when approved or rejected.
+                Approve a proposal to create their portal and assign a supervisor. Students are emailed when assigned or rejected.
               </p>
             </Card>
           )}
@@ -347,7 +346,7 @@ function ApproveModal({
             disabled={busy || !reg.trim()}
           >
             <CheckCircle2 size={16} />
-            {busy ? "Approving..." : "Approve & approve account for student"}
+            {busy ? "Assigning..." : "Assign & approve"}
           </button>
         </div>
       </div>

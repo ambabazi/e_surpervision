@@ -133,6 +133,8 @@ class PendingReviewOut(SubmissionOut):
     review_deadline_hours: int
     hours_until_deadline: int
     is_overdue: bool
+    submitted_hour: Optional[int] = None
+    priority_label: Optional[str] = None
 
 
 class SupervisorDashboardOut(CamelModel):
@@ -153,6 +155,20 @@ class SupervisorWorkloadOut(CamelModel):
     load: int
     capacity: int
     status: str
+
+
+class HodStudentRowOut(CamelModel):
+    id: int
+    full_name: str
+    email: str
+    registration_number: Optional[str] = None
+    program: Optional[str] = None
+    department: Optional[str] = None
+    phone: Optional[str] = None
+    is_assigned: bool
+    project_title: Optional[str] = None
+    project_status: Optional[ProjectStatus] = None
+    supervisor: Optional[UserOut] = None
 
 
 class HodDashboardOut(CamelModel):
@@ -314,6 +330,14 @@ class HodProposalPipelineOut(CamelModel):
 
 class RejectProposalRequest(BaseModel):
     reason: Optional[str] = None
+
+
+class AssignStudentSupervisorRequest(BaseModel):
+    supervisor_id: int = Field(alias="supervisorId")
+    project_title: Optional[str] = Field(None, alias="projectTitle")
+    project_description: Optional[str] = Field(None, alias="projectDescription")
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class CreateStudentRequest(BaseModel):

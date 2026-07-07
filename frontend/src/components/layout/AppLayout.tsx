@@ -259,7 +259,7 @@ export default function AppLayout() {
           </button>
 
           <div className="hidden lg:block">
-            <p className="text-sm font-semibold text-white">Capstone E-Supervision Portal</p>
+            <p className="text-sm font-semibold text-white">E-Supervision Portal</p>
             <p className="text-xs text-white/80">{PORTAL_LABEL[user.role]}</p>
           </div>
 

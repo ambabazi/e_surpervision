@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 
 from app.auth import hash_password
 from app.demo_credentials import EXAMPLE_REG_NUMBER, format_registration_number, student_password, STAFF_DEFAULT_PASSWORD
+from app.datetime_utils import utc_now
+from app.files import write_demo_pdf
 from app.models import (
     Feedback,
     Notification,
@@ -72,15 +74,19 @@ def seed_demo_data(db: Session) -> None:
     em_proj = _project(db, "Blockchain for Health Records", "Permissioned blockchain for patient records.",
                        "Chapter 4", ProjectStatus.UNDER_REVIEW, 82,
                        date.today() - timedelta(days=140), date.today() + timedelta(days=14), emmanuel, bosco)
-    _submission(db, em_proj, "Chapter 4 - Implementation", "Smart contracts and access control.", SubmissionStatus.UNDER_REVIEW, days_ago=2)
-    _submission(db, em_proj, "Chapter 3 - Methodology", "Research design and ethics.", SubmissionStatus.APPROVED, days_ago=20)
+    _submission(db, em_proj, "Chapter 4 - Implementation", "Smart contracts and access control.", SubmissionStatus.UNDER_REVIEW, days_ago=2, hour=9)
+    _submission(db, em_proj, "Chapter 3 - Methodology", "Research design and ethics.", SubmissionStatus.APPROVED, days_ago=20, hour=10)
 
     clarisse = _student(db, "Clarisse Mutoni", "clarisse.mutoni.ml@gmail.com", "202205000188",
                         "BSc Information Systems", "IT", "+250 788 300 303", student_password("202205000188"))
     cl_proj = _project(db, "ML Crop Yield Prediction", "Predicting yields for smallholder farmers.",
                        "Chapter 3", ProjectStatus.IN_PROGRESS, 55,
                        date.today() - timedelta(days=80), date.today() + timedelta(days=30), clarisse, nshuti)
-    s_cl = _submission(db, cl_proj, "Dataset & Model Plan", "Datasets and baseline models.", SubmissionStatus.SUBMITTED, days_ago=1)
+    _submission(db, cl_proj, "Dataset & Model Plan", "Datasets and baseline models.", SubmissionStatus.SUBMITTED, days_ago=0, hour=8)
+
+    # Extra same-day pending reviews for Jean Bosco (morning before afternoon priority demo)
+    _submission(db, aggie_project, "Chapter 3 - System Design", "Architecture and UI wireframes.", SubmissionStatus.SUBMITTED, days_ago=0, hour=8)
+    _submission(db, aggie_project, "Weekly Progress Report", "Sprint summary for supervisor.", SubmissionStatus.SUBMITTED, days_ago=0, hour=17)
 
     leon = _student(db, "Leon Kagabo", "leon.kagabo.access@gmail.com", "202205000201",
                     "BSc Software Engineering", "IT", "+250 788 300 304", student_password("202205000201"))
@@ -112,7 +118,7 @@ def seed_demo_data(db: Session) -> None:
     law_p1 = _project(db, "Digital Contract Enforcement in Rwanda", "Legal framework for e-contracts.",
                       "Chapter 3", ProjectStatus.IN_PROGRESS, 60,
                       date.today() - timedelta(days=100), date.today() + timedelta(days=25), law_st1, law_kam)
-    _submission(db, law_p1, "Literature Review Draft", "Comparative contract law review.", SubmissionStatus.UNDER_REVIEW, days_ago=4)
+    _submission(db, law_p1, "Literature Review Draft", "Comparative contract law review.", SubmissionStatus.UNDER_REVIEW, days_ago=4, hour=11)
 
     law_st2 = _student(db, "Fabrice Habimana", "fabrice.habimana.law@gmail.com", "202305000302",
                        "LLB Human Rights Law", "LAW", "+250 788 310 402", student_password("202305000302"))
@@ -126,7 +132,7 @@ def seed_demo_data(db: Session) -> None:
     biz_p1 = _project(db, "SME Credit Risk Modelling", "Credit scoring for Rwandan SMEs.",
                       "Chapter 4", ProjectStatus.UNDER_REVIEW, 74,
                       date.today() - timedelta(days=130), date.today() + timedelta(days=16), biz_st1, finance)
-    _submission(db, biz_p1, "Financial Analysis Chapter", "Quantitative risk models.", SubmissionStatus.SUBMITTED, days_ago=3)
+    _submission(db, biz_p1, "Financial Analysis Chapter", "Quantitative risk models.", SubmissionStatus.SUBMITTED, days_ago=0, hour=16)
 
     biz_st2 = _student(db, "Eric Nkurunziza", "eric.nkurunziza.mba@gmail.com", "202305000402",
                        "BBA Marketing", "BUSINESS", "+250 788 320 502", student_password("202305000402"))
@@ -140,7 +146,7 @@ def seed_demo_data(db: Session) -> None:
     edu_p1 = _project(db, "Play-Based Learning in Kigali Preschools", "Classroom intervention study.",
                       "Chapter 3", ProjectStatus.IN_PROGRESS, 58,
                       date.today() - timedelta(days=90), date.today() + timedelta(days=28), edu_st1, edu_niy)
-    _submission(db, edu_p1, "Field Observation Report", "Week 4 classroom notes.", SubmissionStatus.APPROVED, days_ago=10)
+    _submission(db, edu_p1, "Field Observation Report", "Week 4 classroom notes.", SubmissionStatus.APPROVED, days_ago=10, hour=9)
 
     edu_st2 = _student(db, "Samuel Bizimana", "samuel.bizimana.teacher@gmail.com", "202305000502",
                        "BEd Curriculum Studies", "EDUCATION", "+250 788 330 602", student_password("202305000502"))
@@ -245,12 +251,12 @@ def _seed_it_project_detail(db, project, student, supervisor):
     _task(db, project, "Final Design Submission", "Complete design documentation.", "MILESTONE", TaskStatus.UPCOMING, Priority.HIGH, 0, date.today() + timedelta(days=18), True)
 
     s1 = _submission(db, project, "Chapter 2 - Literature Review",
-                     "Draft literature review for supervisor review.", SubmissionStatus.UNDER_REVIEW, days_ago=6)
+                     "Draft literature review for supervisor review.", SubmissionStatus.UNDER_REVIEW, days_ago=6, hour=10)
     _feedback(db, project, supervisor, "Feedback on Literature Review",
               "Strong domain coverage. Add 2024–2025 references on academic workflow automation.", s1, days_ago=5)
     _feedback(db, project, supervisor, "Proposal Approved",
               "Excellent proposal — proceed to detailed design.", None, days_ago=79)
-    s2 = _submission(db, project, "Chapter 1 - Introduction", "Introduction and problem statement.", SubmissionStatus.APPROVED, days_ago=30)
+    s2 = _submission(db, project, "Chapter 1 - Introduction", "Introduction and problem statement.", SubmissionStatus.APPROVED, days_ago=30, hour=9)
     _feedback(db, project, supervisor, "Introduction Review", "Clear problem statement and objectives.", s2, days_ago=28)
 
 
@@ -309,11 +315,16 @@ def _task(db, project, title, description, category, status, priority, progress,
     ))
 
 
-def _submission(db, project, title, notes, status, *, days_ago=0):
+def _submission(db, project, title, notes, status, *, days_ago=0, hour=9):
+    slug = title.replace(" ", "_").replace("-", "_").lower()[:40]
+    stored_name = f"demo_{project.id}_{slug}.pdf"
+    file_name = title.replace(" ", "_").replace("-", "_") + ".pdf"
+    file_url = write_demo_pdf(stored_name, title)
+    submitted_at = utc_now().replace(tzinfo=None) - timedelta(days=days_ago)
+    submitted_at = submitted_at.replace(hour=hour, minute=15, second=0, microsecond=0)
     s = Submission(
         project_id=project.id, title=title, notes=notes, status=status,
-        file_name=title.replace(" ", "_").replace("-", "_") + ".pdf",
-        submitted_at=datetime.utcnow() - timedelta(days=days_ago),
+        file_name=file_name, file_url=file_url, submitted_at=submitted_at,
     )
     db.add(s)
     db.flush()
@@ -324,12 +335,12 @@ def _feedback(db, project, author, title, content, submission, *, days_ago=0):
     db.add(Feedback(
         project_id=project.id, author_id=author.id, title=title, content=content,
         submission_id=submission.id if submission else None,
-        created_at=datetime.utcnow() - timedelta(days=days_ago),
+        created_at=utc_now().replace(tzinfo=None) - timedelta(days=days_ago),
     ))
 
 
 def _notification(db, user, title, message, ntype, severity, read, action_path=None):
     db.add(Notification(
         user_id=user.id, title=title, message=message, type=ntype, severity=severity,
-        read=read, action_path=action_path, created_at=datetime.utcnow(),
+        read=read, action_path=action_path, created_at=utc_now().replace(tzinfo=None),
     ))

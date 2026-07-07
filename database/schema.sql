@@ -1,11 +1,12 @@
 -- =============================================================================
--- UoK Capstone E-Supervision Portal — PostgreSQL schema
+-- UoK E-Supervision Portal — PostgreSQL schema (8 tables)
 -- =============================================================================
--- Run this in pgAdmin (Query Tool) AFTER creating the database and user.
--- See database/01_create_database.sql for database/user setup.
+-- Run this in pgAdmin (Query Tool) AFTER creating the database.
+-- See database/01_create_e_supervision.sql for database creation.
+-- Full reference: DATABASE.md (ERD, FK map, API flows, timezone rules)
 --
 -- Alternative: skip this file and start the Python backend once — it creates
--- the same tables automatically via SQLAlchemy (see README).
+-- the same tables automatically via SQLAlchemy (backend/app/models.py).
 -- =============================================================================
 
 BEGIN;
@@ -168,7 +169,7 @@ CREATE TABLE IF NOT EXISTS supervisor_student_requests (
 COMMIT;
 
 -- =============================================================================
--- Relationship summary
+-- Relationship summary (see DATABASE.md for full FK table and data flows)
 -- =============================================================================
 -- users 1──* projects          (as student_id or supervisor_id)
 -- projects 1──* tasks
@@ -179,3 +180,7 @@ COMMIT;
 -- users 1──* supervisor_student_requests
 -- submissions 1──* feedback  (optional link)
 -- tasks 0──1 submissions     (optional link)
+--
+-- Timestamps: stored UTC; UI displays Africa/Kigali
+-- Submissions: upload window 08:00–17:00 Kigali; queue sorted by submission hour
+-- Review SLA: 7 days (168h) from submissions.submitted_at

@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 
-export function useApi<T>(url: string) {
+export function useApi<T>(url: string | null) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(() => {
+    if (!url) {
+      setLoading(false);
+      setData(null);
+      return;
+    }
     setLoading(true);
     api
       .get<T>(url)

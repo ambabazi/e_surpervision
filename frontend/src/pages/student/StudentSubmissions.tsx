@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FileText, Plus, Upload, X } from "lucide-react";
 import { useApi } from "@/lib/useApi";
 import { api } from "@/lib/api";
@@ -22,7 +22,15 @@ export default function StudentSubmissions() {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ message: string; kind: ToastKind } | null>(null);
+  const [windowInfo, setWindowInfo] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    api
+      .get<{ enabled: boolean; message: string }>("/public/submission-window")
+      .then((res) => setWindowInfo(res.data.enabled ? res.data.message : null))
+      .catch(() => undefined);
+  }, []);
 
   const resetForm = () => {
     setTitle("");
@@ -58,9 +66,11 @@ export default function StudentSubmissions() {
         message: "Submission successful! Your supervisor has been notified.",
         kind: "success",
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { message?: string; detail?: string } } };
       const message =
-        err?.response?.data?.message ||
+        ax.response?.data?.message ||
+        ax.response?.data?.detail ||
         "Submission failed. Please check your file and try again.";
       setToast({ message, kind: "error" });
     } finally {
@@ -95,6 +105,9 @@ export default function StudentSubmissions() {
           <p className="text-sm text-slate-500">
             Upload PDF or Word documents only (.pdf, .doc, .docx) — max 10 MB.
           </p>
+          {windowInfo && (
+            <p className="mt-1 text-xs text-gold-800">{windowInfo}</p>
+          )}
         </div>
         <button className="btn-primary" onClick={() => setShowForm((s) => !s)}>
           {showForm ? <X size={18} /> : <Plus size={18} />}

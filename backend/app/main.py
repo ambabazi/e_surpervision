@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy import text
@@ -10,14 +11,17 @@ from app.auth_login import login_user
 from app.config import settings
 from app.database import Base, engine, get_db
 from app.files import UPLOAD_DIR, ensure_upload_dir, save_upload
+from app.file_access import assert_file_access
 from app.models import Notification, Project, Role, Submission, User
 from app.models import ProposalStatus
 from app.schemas import (
     ApproveProposalRequest,
+    AssignStudentSupervisorRequest,
     AuthResponse,
     CreateStudentRequest,
     FeedbackOut,
     HealthOut,
+    HodStudentRowOut,
     HodDashboardOut,
     HodFacultyOverviewOut,
     HodProposalPipelineOut,
@@ -45,6 +49,7 @@ from app.proposal_services import (
     approve_proposal,
     create_supervisor_request,
     create_topic_proposal,
+    hod_assign_student_supervisor,
     hod_create_student,
     hod_proposal_pipeline,
     list_hod_student_requests,
@@ -58,12 +63,14 @@ from app.hod_sync import sync_department_structure
 from app.departments import DEPARTMENT_LABELS, PROGRAMS_BY_DEPARTMENT, Department
 from app.migrate import backfill_notification_paths, migrate_schema, sync_student_registrations
 from app.seed import seed_demo_data, seed_sample_proposals
+from app.submission_policy import sort_submissions_by_priority
 from app.services import (
     create_submission,
     feedback_out,
     get_current_user,
     hod_dashboard,
     hod_faculty_overview,
+    hod_students_list,
     hod_supervisor_projects,
     notification_out,
     require_role,
@@ -122,6 +129,27 @@ def startup():
         db.close()
 
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(_, exc: RequestValidationError):
+    errors = exc.errors()
+    if errors:
+        first = errors[0]
+        field = first.get("loc", [])[-1] if first.get("loc") else None
+        msg = first.get("msg", "Invalid request data")
+        message = f"{field}: {msg}" if field and field != "body" else msg
+    else:
+        message = "Invalid request data"
+    return JSONResponse(
+        status_code=422,
+        content={
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "status": 422,
+            "error": "Validation Error",
+            "message": message,
+        },
+    )
+
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(_, exc: HTTPException):
     return JSONResponse(
@@ -141,8 +169,10 @@ def health():
 
 
 @app.get("/api/files/{filename}")
-def download_file(filename: str, user: User = Depends(get_current_user)):
-    path = UPLOAD_DIR / filename
+def download_file(filename: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    safe_name = filename.split("/")[-1]
+    assert_file_access(db, user, safe_name)
+    path = UPLOAD_DIR / safe_name
     if not path.exists() or not path.is_file():
         raise HTTPException(status.HTTP_404_NOT_FOUND, "File not found")
     return FileResponse(path)
@@ -170,6 +200,21 @@ def public_programs():
 @app.get("/api/public/supervisors", response_model=list[PublicSupervisorOut])
 def public_supervisors(department: str, db: Session = Depends(get_db)):
     return list_public_supervisors(db, department=department)
+
+
+@app.get("/api/public/submission-window")
+def public_submission_window():
+    return {
+        "enabled": settings.submission_window_enabled,
+        "timezone": settings.submission_timezone,
+        "startHour": settings.submission_window_start_hour,
+        "endHour": settings.submission_window_end_hour,
+        "message": (
+            f"Submit between {settings.submission_window_start_hour:02d}:00 and "
+            f"{settings.submission_window_end_hour:02d}:00 ({settings.submission_timezone}). "
+            "Morning submissions appear first on your supervisor's review queue."
+        ),
+    }
 
 
 @app.post("/api/public/topic-proposals", response_model=TopicProposalOut, status_code=201)
@@ -254,12 +299,11 @@ def supervisor_students(user: User = Depends(require_role(Role.SUPERVISOR)), db:
 
 @app.get("/api/supervisor/reviews", response_model=list[SubmissionOut])
 def supervisor_reviews(user: User = Depends(require_role(Role.SUPERVISOR)), db: Session = Depends(get_db)):
-    rows = (
+    rows = sort_submissions_by_priority(
         db.query(Submission)
         .join(Project)
         .options(joinedload(Submission.project).joinedload(Project.student))
         .filter(Project.supervisor_id == user.id)
-        .order_by(Submission.submitted_at.desc())
         .all()
     )
     return [submission_out(s) for s in rows if s]
@@ -351,6 +395,11 @@ def hod_reject_proposal(
     return reject_proposal(db, proposal_id, body)
 
 
+@app.get("/api/hod/students", response_model=list[HodStudentRowOut])
+def hod_list_students(hod: User = Depends(require_role(Role.HOD)), db: Session = Depends(get_db)):
+    return hod_students_list(db, hod)
+
+
 @app.post("/api/hod/students", response_model=UserOut, status_code=201)
 def hod_create_student_account(
     body: CreateStudentRequest,
@@ -358,6 +407,23 @@ def hod_create_student_account(
     db: Session = Depends(get_db),
 ):
     return hod_create_student(db, body)
+
+
+@app.post("/api/hod/students/{student_id}/assign-supervisor", response_model=UserOut)
+def hod_assign_supervisor(
+    student_id: int,
+    body: AssignStudentSupervisorRequest,
+    hod: User = Depends(require_role(Role.HOD)),
+    db: Session = Depends(get_db),
+):
+    return hod_assign_student_supervisor(
+        db,
+        hod,
+        student_id,
+        supervisor_id=body.supervisor_id,
+        project_title=body.project_title,
+        project_description=body.project_description,
+    )
 
 
 @app.get("/api/hod/student-requests", response_model=list[HodStudentRequestOut])

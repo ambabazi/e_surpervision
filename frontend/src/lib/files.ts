@@ -1,3 +1,5 @@
+import { api } from "./api";
+
 const ALLOWED = [".pdf", ".doc", ".docx"] as const;
 
 const MIME_TYPES = new Set([
@@ -27,4 +29,18 @@ export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function apiFilePath(fileUrl: string): string {
+  const path = fileUrl.replace(/^\/api/, "");
+  return path.startsWith("/") ? path : `/${path}`;
+}
+
+export async function openAuthenticatedFile(fileUrl: string): Promise<void> {
+  const response = await api.get(apiFilePath(fileUrl), { responseType: "blob" });
+  const contentType = (response.headers["content-type"] as string) || "application/pdf";
+  const blob = new Blob([response.data], { type: contentType });
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank", "noopener,noreferrer");
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
