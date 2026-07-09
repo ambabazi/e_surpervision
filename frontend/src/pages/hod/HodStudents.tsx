@@ -298,7 +298,7 @@ function AssignSupervisorModal({
   onDone: () => void;
 }) {
   const available = useMemo(
-    () => supervisors.filter((s) => s.spotsAvailable > 0),
+    () => supervisors.filter((s) => (s.spotsAvailable ?? 0) > 0),
     [supervisors],
   );
   const [supervisorId, setSupervisorId] = useState(String(available[0]?.id || ""));

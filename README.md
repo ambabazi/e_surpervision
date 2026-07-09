@@ -11,16 +11,17 @@ A full-stack web platform for capstone/thesis supervision at the **University of
 ## Table of contents
 
 1. [Project structure](#project-structure)
-2. [Quick start (local)](#quick-start-local)
-3. [PostgreSQL + pgAdmin setup](#postgresql--pgadmin-setup)
-4. [Authentication & security](#authentication--security)
-5. [Database schema & relationships](#database-schema--relationships)
-6. [Environment variables](#environment-variables)
-7. [Demo accounts](#demo-accounts)
-8. [Features by role](#features-by-role)
-9. [API overview](#api-overview)
-10. [Free deployment recommendations](#free-deployment-recommendations)
-11. [Production checklist](#production-checklist)
+2. [Local setup by operating system](#local-setup-by-operating-system)
+3. [Application users & portals](#application-users--portals)
+4. [PostgreSQL + pgAdmin setup](#postgresql--pgadmin-setup)
+5. [Authentication & security](#authentication--security)
+6. [Database schema & relationships](#database-schema--relationships)
+7. [Environment variables](#environment-variables)
+8. [Demo accounts](#demo-accounts)
+9. [Features by role](#features-by-role)
+10. [API overview](#api-overview)
+11. [Free deployment recommendations](#free-deployment-recommendations)
+12. [Production checklist](#production-checklist)
 
 ---
 
@@ -46,78 +47,100 @@ e-supervision/
 
 ---
 
-## Quick start (local — no Docker)
+## Local setup by operating system
 
-### Prerequisites
+Use these steps to run the full stack locally on **Windows**, **Linux**, or **macOS**. You need:
 
-- Python 3.11+
-- Node.js 18+
-- **PostgreSQL 14+** installed on your machine ([download](https://www.postgresql.org/download/))
-- **pgAdmin 4** (usually installed with PostgreSQL)
+| Tool | Version | Purpose |
+| ---- | ------- | ------- |
+| Python | 3.11+ | FastAPI backend |
+| Node.js | 18+ | React frontend |
+| PostgreSQL | 14+ | Database (`e_supervision`) |
+| pgAdmin 4 | optional | GUI for PostgreSQL |
 
-### 1. Install PostgreSQL (Ubuntu / Debian example)
+Clone the repo once, then follow your OS section below.
 
 ```bash
-sudo apt update
-sudo apt install postgresql postgresql-contrib pgadmin4
+git clone https://github.com/ambabazi/e_surpervision.git
+cd e_surpervision
 ```
 
-On Windows or macOS, use the installer from [postgresql.org/download](https://www.postgresql.org/download/) — it includes pgAdmin.
+---
 
-### 2. Create the database (pgAdmin)
+### Windows
 
-**Already created `e_supervision` in pgAdmin?** Skip Docker entirely. Set `backend/.env`:
+#### 1. Install prerequisites
 
-```env
-DATABASE_URL=postgresql://postgres:YOUR_PGADMIN_PASSWORD@localhost:5432/e_supervision
-```
+1. **Python 3.11+** — [python.org/downloads](https://www.python.org/downloads/)  
+   During install, check **“Add python.exe to PATH”**.
+2. **Node.js 18+** — [nodejs.org](https://nodejs.org/)
+3. **PostgreSQL 14+** — [postgresql.org/download/windows](https://www.postgresql.org/download/windows/)  
+   The installer includes **pgAdmin 4**. Remember the **postgres** superuser password you set.
 
-Then run `python check_db.py` from `backend/` to verify the connection. See [`database/README.md`](database/README.md).
+Open **PowerShell** or **Command Prompt** for the commands below.
 
-**Option A — SQL files (recommended for pgAdmin users)**
+#### 2. Create the database
 
-1. Open **pgAdmin** → connect to your local server (password you chose at install).
-2. If needed, run [`database/01_create_e_supervision.sql`](database/01_create_e_supervision.sql) on the `postgres` database.
+**Option A — pgAdmin (recommended)**
+
+1. Open **pgAdmin** → Servers → PostgreSQL → connect with your install password.
+2. Right-click **Databases** → **Query Tool** on `postgres` → run [`database/01_create_e_supervision.sql`](database/01_create_e_supervision.sql).
 3. Connect to **`e_supervision`** → Query Tool → run [`database/schema.sql`](database/schema.sql).
-4. Refresh **Tables** under `public` — you should see `users`, `projects`, `topic_proposals`, etc.
 
-**Option B — Let the backend create tables automatically**
+**Option B — SQL Shell (psql)**
 
-Create only the empty `e_supervision` database in pgAdmin (if you have not already), set `.env`, then start the backend — SQLAlchemy creates all tables on first run.
-
-> See [`database/README.md`](database/README.md) for full details on the `.sql` files.
-
-### 3. Configure the backend
-
-```bash
-cd backend
-cp .env.example .env
+```powershell
+psql -U postgres -f database\01_create_e_supervision.sql
+psql -U postgres -d e_supervision -f database\schema.sql
 ```
 
-Edit `.env` — replace `YOUR_PGADMIN_PASSWORD` with your pgAdmin login password:
+#### 3. Configure the backend
+
+```powershell
+cd backend
+copy .env.example .env
+```
+
+Edit `backend\.env`. Use the **postgres** user and the password from installation:
 
 ```env
-DATABASE_URL=postgresql://postgres:YOUR_PGADMIN_PASSWORD@localhost:5432/e_supervision
+PGHOST=localhost
+PGPORT=5432
+PGUSER=postgres
+PGPASSWORD=YOUR_WINDOWS_POSTGRES_PASSWORD
+PGDATABASE=e_supervision
 JWT_SECRET=your-long-random-secret-here
+CORS_ORIGINS=http://localhost:5173
 ```
 
-### 4. Run the backend
+If your password contains `@` or `#`, use the split `PG*` variables above (do not put a raw `@` inside `DATABASE_URL`).
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
+Test the connection:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
 pip install -r requirements.txt
-chmod +x run.sh
-./run.sh
+python check_db.py
+```
+
+#### 4. Run the backend
+
+```powershell
+.venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
 ```
 
 API: **http://localhost:8080** · Docs: **http://localhost:8080/docs**
 
-On first startup the app seeds demo users and sample data if the database is empty.
+> `run.sh` is for Linux/macOS. On Windows, use the `uvicorn` command above (or Git Bash/WSL if you prefer `./run.sh`).
 
-### 5. Run the frontend
+#### 5. Run the frontend
 
-```bash
+Open a **second** terminal:
+
+```powershell
 cd frontend
 npm install
 npm run dev
@@ -125,26 +148,217 @@ npm run dev
 
 App: **http://localhost:5173**
 
+---
+
+### Linux (Ubuntu / Debian)
+
+#### 1. Install prerequisites
+
+```bash
+sudo apt update
+sudo apt install -y python3 python3-venv python3-pip nodejs npm postgresql postgresql-contrib
+```
+
+Install **pgAdmin** if you want a GUI: `sudo apt install pgadmin4` or use the [pgAdmin installer](https://www.pgadmin.org/download/).
+
+Set a password for the Linux **postgres** system user if needed:
+
+```bash
+sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'your_password';"
+```
+
+#### 2. Create the database
+
+**Option A — terminal**
+
+```bash
+sudo -u postgres psql -f database/01_create_e_supervision.sql
+sudo -u postgres psql -d e_supervision -f database/schema.sql
+```
+
+**Option B — pgAdmin** — same steps as the Windows pgAdmin section.
+
+**Option C — automatic tables** — create only the empty `e_supervision` database, configure `.env`, start the backend once; SQLAlchemy creates tables.
+
+#### 3. Configure the backend
+
+```bash
+cd backend
+cp .env.example .env
+```
+
+```env
+PGHOST=localhost
+PGPORT=5432
+PGUSER=postgres
+PGPASSWORD=your_password
+PGDATABASE=e_supervision
+JWT_SECRET=your-long-random-secret-here
+CORS_ORIGINS=http://localhost:5173
+```
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python check_db.py
+```
+
+#### 4. Run the backend
+
+```bash
+chmod +x run.sh
+./run.sh
+```
+
+#### 5. Run the frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+### macOS
+
+#### 1. Install prerequisites
+
+**Homebrew** (recommended):
+
+```bash
+brew install python@3.11 node postgresql@16
+brew services start postgresql@16
+```
+
+Add PostgreSQL to your PATH if needed (Homebrew prints the exact command after install).
+
+Download **pgAdmin** from [pgadmin.org/download](https://www.pgadmin.org/download/) if you want a GUI.
+
+#### 2. Create the database
+
+**Option A — terminal**
+
+```bash
+createdb e_supervision   # if empty DB is enough; tables via backend or schema.sql
+psql -d e_supervision -f database/schema.sql
+```
+
+Or use the SQL script on the default cluster:
+
+```bash
+psql postgres -f database/01_create_e_supervision.sql
+psql -d e_supervision -f database/schema.sql
+```
+
+**Option B — pgAdmin** — same as Windows.
+
+On Apple Silicon, your PostgreSQL user is often your **macOS login name**, not `postgres`. Check with:
+
+```bash
+whoami
+psql -l
+```
+
+If `psql` connects without `-U postgres`, set in `.env`:
+
+```env
+PGUSER=your_mac_username
+PGPASSWORD=
+PGDATABASE=e_supervision
+```
+
+(Leave `PGPASSWORD` empty if local trust auth is enabled.)
+
+#### 3. Configure the backend
+
+```bash
+cd backend
+cp .env.example .env
+# Edit .env — PGUSER may be your Mac username, not postgres
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python check_db.py
+```
+
+#### 4. Run the backend
+
+```bash
+chmod +x run.sh
+./run.sh
+```
+
+#### 5. Run the frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+### After first startup (all platforms)
+
+- Backend seeds **demo users** if the database is empty.
+- Reload demo data anytime: `cd backend && python reseed_db.py` (with venv active).
+- Health check: `curl http://localhost:8080/api/health`
+
 ### Optional: Docker instead of native PostgreSQL
 
-Skip this if you already use pgAdmin — Docker will fail with **port 5432 already in use**.
-
-If you prefer Docker and do not have local PostgreSQL:
+Skip if port **5432** is already in use by local PostgreSQL.
 
 ```bash
 docker compose up -d db
 ```
 
-Use `DATABASE_URL=postgresql://uok:uok@localhost:5432/uok_esupervision` in `.env`.
+Use in `backend/.env`:
+
+```env
+DATABASE_URL=postgresql://uok:uok@localhost:5432/uok_esupervision
+```
+
+This uses the **`uok`** database user from [`database/01_create_database.sql`](database/01_create_database.sql) (legacy Docker setup).
 
 ### SQLite (not recommended)
 
-SQLite is only for quick offline tests. For your project use PostgreSQL so all users, projects, and proposals live in `e_supervision`:
+Only for quick offline tests — not for viva or production:
 
 ```env
-# Do not use for production or viva demo
 DATABASE_URL=sqlite:///./uok.db
 ```
+
+---
+
+## Application users & portals
+
+The system has **three login portals**. Each user type signs in on a different screen at **http://localhost:5173**.
+
+| Portal | Who | Login field | Demo password | URL path |
+| ------ | --- | ----------- | ------------- | -------- |
+| **Student** | Enrolled capstone students | 12-digit registration number | Same as reg number (e.g. `202305000078`) | `/login` → Student |
+| **Supervisor** | Department lecturers | `@uok.ac.rw` email | `Password@123` | `/login` → Supervisor |
+| **HOD** | Head of Department | `@uok.ac.rw` email | `Password@123` | `/login` → HOD |
+
+**Public (no login):** anyone can submit a topic at **`/apply`**. After HOD approval, a student account is created.
+
+Students and supervisors **cannot self-register**. HODs approve applicants and can create or assign students manually.
+
+### PostgreSQL users (database layer)
+
+These are **not** app logins — they are database accounts on your machine:
+
+| DB user | When to use | Connection example |
+| ------- | ----------- | ------------------ |
+| **`postgres`** | Default superuser on Windows/Linux installers | `PGUSER=postgres` in `backend/.env` |
+| **Your OS username** | Common default on macOS Homebrew PostgreSQL | `PGUSER=aggie` (your `whoami`) |
+| **`uok`** | Optional; created by `01_create_database.sql` for Docker | `postgresql://uok:uok@localhost:5432/uok_esupervision` |
+
+Always use database name **`e_supervision`** for normal local development (unless using Docker legacy `uok_esupervision`).
+
+See [Demo accounts](#demo-accounts) for full test emails and registration numbers.
 
 ---
 
