@@ -546,6 +546,7 @@ def supervisor_students_list(db: Session, supervisor: User):
     for p in projects:
         submissions = (
             db.query(Submission)
+            .options(joinedload(Submission.project).joinedload(Project.student))
             .filter(Submission.project_id == p.id)
             .order_by(Submission.submitted_at.desc())
             .all()
@@ -563,6 +564,7 @@ def supervisor_students_list(db: Session, supervisor: User):
                 last_submission_at=last.submitted_at if last else None,
                 completed_milestones=sum(1 for t in milestones if t.status == TaskStatus.COMPLETED),
                 total_milestones=len(milestones),
+                submissions=[submission_out(s) for s in submissions if s],
             )
         )
     return results

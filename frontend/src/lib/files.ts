@@ -44,3 +44,17 @@ export async function openAuthenticatedFile(fileUrl: string): Promise<void> {
   window.open(url, "_blank", "noopener,noreferrer");
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
+
+export async function downloadAuthenticatedFile(fileUrl: string, fileName?: string): Promise<void> {
+  const response = await api.get(apiFilePath(fileUrl), { responseType: "blob" });
+  const contentType = (response.headers["content-type"] as string) || "application/octet-stream";
+  const blob = new Blob([response.data], { type: contentType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName || "submission";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}

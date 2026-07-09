@@ -191,6 +191,7 @@ export interface SupervisorStudent {
   lastSubmissionAt?: string;
   completedMilestones: number;
   totalMilestones: number;
+  submissions?: Submission[];
 }
 
 export interface SupervisorFacultyStat {

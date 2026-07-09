@@ -192,6 +192,7 @@ class SupervisorStudentOut(CamelModel):
     last_submission_at: Optional[datetime] = None
     completed_milestones: int
     total_milestones: int
+    submissions: list[SubmissionOut] = []
 
 
 class SupervisorFacultyStatOut(CamelModel):
