@@ -11,6 +11,13 @@ STAFF_DEFAULT_PASSWORD = "Password@123"
 
 EXAMPLE_REG_NUMBER = "202305000078"
 
+HOD_ACCOUNTS: list[tuple[str, str, str]] = [
+    ("IT", "hod.it@uok.ac.rw", "Dr. Morris Kagabo"),
+    ("Law", "hod.law@uok.ac.rw", "Dr. Paul Nkurikiye"),
+    ("Business", "hod.business@uok.ac.rw", "Dr. Alice Mukamana"),
+    ("Education", "hod.education@uok.ac.rw", "Dr. Beatrice Uwimana"),
+]
+
 
 def format_registration_number(raw: str) -> str:
     """Normalize input to 12-digit UoK registration number."""

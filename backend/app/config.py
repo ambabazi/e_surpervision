@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     submission_timezone: str = "Africa/Kigali"
     submission_window_start_hour: int = 8
     submission_window_end_hour: int = 17
-    submission_window_enabled: bool = True
+    submission_window_enabled: bool = False
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
     mail_enabled: bool = False
     smtp_host: str = ""

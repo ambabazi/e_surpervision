@@ -220,6 +220,14 @@ def public_supervisors(department: str, db: Session = Depends(get_db)):
 
 @app.get("/api/public/submission-window")
 def public_submission_window():
+    if not settings.submission_window_enabled:
+        return {
+            "enabled": False,
+            "timezone": settings.submission_timezone,
+            "startHour": settings.submission_window_start_hour,
+            "endHour": settings.submission_window_end_hour,
+            "message": "Submissions are accepted at any time.",
+        }
     return {
         "enabled": settings.submission_window_enabled,
         "timezone": settings.submission_timezone,

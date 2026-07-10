@@ -14,9 +14,8 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import UokLogo from "@/components/UokLogo";
 import { EXAMPLE_REG_NUMBER, formatRegNumberInput } from "@/lib/regNumber";
+import { HOD_ACCOUNTS, STAFF_DEFAULT_PASSWORD } from "@/lib/demoAccounts";
 import type { Role } from "@/types";
-
-const STAFF_DEFAULT_PASSWORD = "Password@123";
 
 const PORTAL_CONFIG: Record<
   Role,
@@ -59,7 +58,7 @@ const PORTAL_CONFIG: Record<
     icon: Building2,
     identifier: "hod.it@uok.ac.rw",
     password: STAFF_DEFAULT_PASSWORD,
-    hint: "Use your @uok.ac.rw email. Default password is Password@123 until you change it.",
+    hint: "Use your @uok.ac.rw email. All department HODs use Password@123 — pick your department below.",
     identifierLabel: "University Email",
     identifierType: "email",
     tagline: "Oversee department-wide supervision, assign supervisors, and monitor faculty performance.",
@@ -211,6 +210,28 @@ export default function Login({ role }: LoginProps) {
                 />
               </div>
               <p className="mt-1 text-xs text-slate-400">{config.hint}</p>
+              {role === "HOD" && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {HOD_ACCOUNTS.map((hod) => (
+                    <button
+                      key={hod.email}
+                      type="button"
+                      onClick={() => {
+                        setIdentifier(hod.email);
+                        setPassword(STAFF_DEFAULT_PASSWORD);
+                        setError("");
+                      }}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                        identifier === hod.email
+                          ? "border-crimson-600 bg-crimson-50 text-crimson-700"
+                          : "border-slate-200 text-slate-600 hover:border-crimson-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      {hod.department} HOD
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>

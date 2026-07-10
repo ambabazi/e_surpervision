@@ -495,7 +495,7 @@ Copy `backend/.env.example` to `backend/.env`:
 | `JWT_SECRET` | Signs auth tokens | Long random string |
 | `JWT_EXPIRATION_HOURS` | Token lifetime | `48` |
 | `CORS_ORIGINS` | Allowed frontend URLs (no path) | `http://localhost:5173` |
-| `SUBMISSION_WINDOW_ENABLED` | Enforce 08:00–17:00 upload window | `true` |
+| `SUBMISSION_WINDOW_ENABLED` | Enforce 08:00–17:00 upload window | `false` (set `true` to restrict) |
 | `SUBMISSION_TIMEZONE` | Window timezone | `Africa/Kigali` |
 | `SUBMISSION_WINDOW_START_HOUR` | First allowed hour | `8` |
 | `SUBMISSION_WINDOW_END_HOUR` | Last allowed hour (exclusive) | `17` |

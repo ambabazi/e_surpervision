@@ -90,6 +90,9 @@ This loads 4 HODs, 10 supervisors, ~15 students, topic proposals, submissions (w
 | Student | `202305000078` | `202305000078` |
 | Supervisor | `jean.bosco@uok.ac.rw` | `Password@123` |
 | HOD (IT) | `hod.it@uok.ac.rw` | `Password@123` |
+| HOD (Law) | `hod.law@uok.ac.rw` | `Password@123` |
+| HOD (Business) | `hod.business@uok.ac.rw` | `Password@123` |
+| HOD (Education) | `hod.education@uok.ac.rw` | `Password@123` |
 
 Staff must use `@uok.ac.rw` emails. Registration numbers are **12 digits** (`YYYYTTNNNNNN`, e.g. `202305000078`).
 
