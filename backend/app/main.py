@@ -11,7 +11,8 @@ from app.auth_login import login_user
 from app.config import settings
 from app.database import Base, engine, get_db
 from app.files import UPLOAD_DIR, ensure_upload_dir, save_upload
-from app.file_access import assert_file_access
+from app.file_access import assert_file_access, submission_for_filename
+from app.submission_files import regenerate_submission_file
 from app.models import Notification, Project, Role, Submission, User
 from app.models import ProposalStatus
 from app.schemas import (
@@ -63,6 +64,7 @@ from app.hod_sync import sync_department_structure
 from app.departments import DEPARTMENT_LABELS, PROGRAMS_BY_DEPARTMENT, Department
 from app.migrate import backfill_notification_paths, migrate_schema, sync_student_registrations
 from app.seed import seed_demo_data, seed_sample_proposals
+from app.submission_files import ensure_all_submission_files
 from app.submission_policy import sort_submissions_by_priority
 from app.services import (
     create_submission,
@@ -125,6 +127,9 @@ def startup():
         sync_department_structure(db)
         backfill_notification_paths(db)
         sync_student_registrations(db)
+        restored = ensure_all_submission_files(db)
+        if restored:
+            print(f"Ensured {restored} student submission file(s) on disk.")
     finally:
         db.close()
 
@@ -174,8 +179,19 @@ def download_file(filename: str, user: User = Depends(get_current_user), db: Ses
     assert_file_access(db, user, safe_name)
     path = UPLOAD_DIR / safe_name
     if not path.exists() or not path.is_file():
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "File not found")
-    return FileResponse(path)
+        path = regenerate_submission_file(db, safe_name)
+        if not path or not path.exists():
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "File not found")
+    submission = submission_for_filename(db, safe_name)
+    media_type = "application/octet-stream"
+    if safe_name.lower().endswith(".pdf"):
+        media_type = "application/pdf"
+    elif safe_name.lower().endswith(".docx"):
+        media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    elif safe_name.lower().endswith(".doc"):
+        media_type = "application/msword"
+    download_name = submission.file_name if submission and submission.file_name else safe_name
+    return FileResponse(path, media_type=media_type, filename=download_name)
 
 
 @app.post("/api/auth/login", response_model=AuthResponse)

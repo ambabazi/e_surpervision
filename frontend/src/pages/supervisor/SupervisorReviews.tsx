@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ExternalLink, FileText, X } from "lucide-react";
 import { useApi } from "@/lib/useApi";
 import { api } from "@/lib/api";
-import { openAuthenticatedFile } from "@/lib/files";
+import { DocumentPreviewModal } from "@/components/DocumentPreviewModal";
 import {
   Avatar,
   Card,
@@ -30,16 +30,11 @@ function submissionHourLabel(submittedAt?: string): string {
 export default function SupervisorReviews() {
   const { data, loading, error, reload } = useApi<Submission[]>("/supervisor/reviews");
   const [active, setActive] = useState<Submission | null>(null);
-  const [openingId, setOpeningId] = useState<number | null>(null);
+  const [preview, setPreview] = useState<Submission | null>(null);
 
-  const openDoc = async (submission: Submission) => {
+  const openDoc = (submission: Submission) => {
     if (!submission.fileUrl) return;
-    setOpeningId(submission.id);
-    try {
-      await openAuthenticatedFile(submission.fileUrl);
-    } finally {
-      setOpeningId(null);
-    }
+    setPreview(submission);
   };
 
   if (loading) return <Spinner label="Loading submissions..." />;
@@ -81,10 +76,9 @@ export default function SupervisorReviews() {
                 <button
                   className="btn-outline !py-2 text-xs"
                   onClick={() => openDoc(s)}
-                  disabled={openingId === s.id}
                 >
                   <ExternalLink size={14} />
-                  {openingId === s.id ? "Opening..." : "Open document"}
+                  Open document
                 </button>
               ) : (
                 <span className="text-xs text-slate-400">No file attached</span>
@@ -97,6 +91,15 @@ export default function SupervisorReviews() {
         </div>
       )}
 
+      {preview?.fileUrl && (
+        <DocumentPreviewModal
+          fileUrl={preview.fileUrl}
+          fileName={preview.fileName}
+          title={preview.title}
+          onClose={() => setPreview(null)}
+        />
+      )}
+
       {active && (
         <ReviewModal
           submission={active}
@@ -105,6 +108,7 @@ export default function SupervisorReviews() {
             setActive(null);
             reload();
           }}
+          onPreview={(submission) => setPreview(submission)}
         />
       )}
     </div>
@@ -115,15 +119,16 @@ function ReviewModal({
   submission,
   onClose,
   onDone,
+  onPreview,
 }: {
   submission: Submission;
   onClose: () => void;
   onDone: () => void;
+  onPreview: (submission: Submission) => void;
 }) {
   const [status, setStatus] = useState<SubmissionStatus>("APPROVED");
   const [feedback, setFeedback] = useState("");
   const [busy, setBusy] = useState(false);
-  const [opening, setOpening] = useState(false);
 
   const submit = async () => {
     setBusy(true);
@@ -138,14 +143,9 @@ function ReviewModal({
     }
   };
 
-  const openDoc = async () => {
+  const openDoc = () => {
     if (!submission.fileUrl) return;
-    setOpening(true);
-    try {
-      await openAuthenticatedFile(submission.fileUrl);
-    } finally {
-      setOpening(false);
-    }
+    onPreview(submission);
   };
 
   return (
@@ -167,9 +167,9 @@ function ReviewModal({
         </div>
 
         {submission.fileUrl && (
-          <button className="btn-outline mb-4 w-full !py-2 text-xs" onClick={openDoc} disabled={opening}>
+          <button className="btn-outline mb-4 w-full !py-2 text-xs" onClick={openDoc}>
             <ExternalLink size={14} />
-            {opening ? "Opening document..." : `Open ${submission.fileName || "document"}`}
+            {`Open ${submission.fileName || "document"}`}
           </button>
         )}
 

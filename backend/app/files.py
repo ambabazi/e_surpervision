@@ -21,8 +21,15 @@ def ensure_upload_dir() -> Path:
 
 
 def minimal_pdf_bytes(title: str) -> bytes:
-    text = title[:80].replace("(", "[").replace(")", "]")
-    stream = f"BT /F1 12 Tf 72 720 Td ({text}) Tj ET"
+    lines = title.split("\n")[:6]
+    stream_parts = ["BT /F1 11 Tf"]
+    y = 750
+    for line in lines:
+        text = line[:90].replace("(", "[").replace(")", "]")
+        stream_parts.append(f"72 {y} Td ({text}) Tj")
+        y -= 18
+    stream_parts.append("ET")
+    stream = " ".join(stream_parts)
     objects = [
         b"1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n",
         b"2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n",

@@ -6,7 +6,7 @@ from app.departments import Department
 from app.models import Role, User
 
 HOD_SEED: list[tuple[str, str, Department]] = [
-    ("Dr. Morris Moraa", "hod.it@uok.ac.rw", Department.IT),
+    ("Dr. Morris Kagabo", "hod.it@uok.ac.rw", Department.IT),
     ("Dr. Paul Nkurikiye", "hod.law@uok.ac.rw", Department.LAW),
     ("Dr. Alice Mukamana", "hod.business@uok.ac.rw", Department.BUSINESS),
     ("Dr. Beatrice Uwimana", "hod.education@uok.ac.rw", Department.EDUCATION),

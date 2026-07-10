@@ -3,9 +3,9 @@ from datetime import date, datetime, timedelta
 from sqlalchemy.orm import Session
 
 from app.auth import hash_password
-from app.demo_credentials import EXAMPLE_REG_NUMBER, format_registration_number, student_password, STAFF_DEFAULT_PASSWORD
+from app.demo_credentials import EXAMPLE_REG_NUMBER, student_password, STAFF_DEFAULT_PASSWORD
 from app.datetime_utils import utc_now
-from app.files import write_demo_pdf
+from app.submission_files import stored_name_for_submission, submission_slug, write_demo_submission_file
 from app.models import (
     Feedback,
     Notification,
@@ -36,7 +36,7 @@ def seed_demo_data(db: Session) -> None:
         return
 
     # --- Staff ---
-    hod_it = _staff(db, "Dr. Morris Moraa", "hod.it@uok.ac.rw", Role.HOD, "IT", STAFF_DEFAULT_PASSWORD)
+    hod_it = _staff(db, "Dr. Morris Kagabo", "hod.it@uok.ac.rw", Role.HOD, "IT", STAFF_DEFAULT_PASSWORD)
     hod_law = _staff(db, "Dr. Paul Nkurikiye", "hod.law@uok.ac.rw", Role.HOD, "LAW", STAFF_DEFAULT_PASSWORD)
     hod_business = _staff(db, "Dr. Alice Mukamana", "hod.business@uok.ac.rw", Role.HOD, "BUSINESS", STAFF_DEFAULT_PASSWORD)
     hod_edu = _staff(db, "Dr. Beatrice Uwimana", "hod.education@uok.ac.rw", Role.HOD, "EDUCATION", STAFF_DEFAULT_PASSWORD)
@@ -52,21 +52,21 @@ def seed_demo_data(db: Session) -> None:
     edu_niy = _staff(db, "Dr. Diane Niyonsenga", "education.niyonsenga@uok.ac.rw", Role.SUPERVISOR, "EDUCATION", STAFF_DEFAULT_PASSWORD, "Dr.", "Early Childhood")
     edu_mut = _staff(db, "Dr. Patrick Mutoni", "education.mutoni@uok.ac.rw", Role.SUPERVISOR, "EDUCATION", STAFF_DEFAULT_PASSWORD, "Dr.", "Curriculum Studies")
 
-    # --- Featured student (example reg 202305000090) ---
-    aggie = _student(
-        db, "Aggie Moraa", "aggie.moraa.capstone@gmail.com", EXAMPLE_REG_NUMBER,
+    # --- Featured student (example reg 202305000078) ---
+    faith = _student(
+        db, "Faith Uwase", "faith.uwase.capstone@gmail.com", EXAMPLE_REG_NUMBER,
         "BSc Software Engineering", "IT", "+250 788 300 100",
         student_password(EXAMPLE_REG_NUMBER),
     )
-    aggie_project = _project(
+    faith_project = _project(
         db,
         "AI-Driven Academic Supervision Platform",
         "A web platform streamlining capstone supervision between students, supervisors, and HODs.",
         "Chapter 3", ProjectStatus.IN_PROGRESS, 68,
         date.today() - timedelta(days=95), date.today() + timedelta(days=18),
-        aggie, bosco,
+        faith, bosco,
     )
-    _seed_it_project_detail(db, aggie_project, aggie, bosco)
+    _seed_it_project_detail(db, faith_project, faith, bosco)
 
     # --- IT students ---
     emmanuel = _student(db, "Emmanuel Nshuti", "emmanuel.nshuti.dev@gmail.com", "202205000145",
@@ -85,14 +85,15 @@ def seed_demo_data(db: Session) -> None:
     _submission(db, cl_proj, "Dataset & Model Plan", "Datasets and baseline models.", SubmissionStatus.SUBMITTED, days_ago=0, hour=8)
 
     # Extra same-day pending reviews for Jean Bosco (morning before afternoon priority demo)
-    _submission(db, aggie_project, "Chapter 3 - System Design", "Architecture and UI wireframes.", SubmissionStatus.SUBMITTED, days_ago=0, hour=8)
-    _submission(db, aggie_project, "Weekly Progress Report", "Sprint summary for supervisor.", SubmissionStatus.SUBMITTED, days_ago=0, hour=17)
+    _submission(db, faith_project, "Chapter 3 - System Design", "Architecture and UI wireframes.", SubmissionStatus.SUBMITTED, days_ago=0, hour=8)
+    _submission(db, faith_project, "Weekly Progress Report", "Sprint summary for supervisor.", SubmissionStatus.SUBMITTED, days_ago=0, hour=17, ext=".docx")
 
     leon = _student(db, "Leon Kagabo", "leon.kagabo.access@gmail.com", "202205000201",
                     "BSc Software Engineering", "IT", "+250 788 300 304", student_password("202205000201"))
-    _project(db, "Accessible E-Learning Platform", "Screen-reader-first e-learning design.",
+    leon_proj = _project(db, "Accessible E-Learning Platform", "Screen-reader-first e-learning design.",
              "Chapter 2", ProjectStatus.REVISION, 38,
              date.today() - timedelta(days=55), date.today() + timedelta(days=45), leon, mukandoli)
+    _submission(db, leon_proj, "Chapter 2 - Requirements", "Accessibility requirements and personas.", SubmissionStatus.NEEDS_REVISION, days_ago=3, hour=10)
 
     diane = _student(db, "Diane Ingabire", "diane.ingabire.iot@gmail.com", "202205000112",
                      "BSc Information Systems", "IT", "+250 788 300 305", student_password("202205000112"))
@@ -100,12 +101,14 @@ def seed_demo_data(db: Session) -> None:
                        "Chapter 3", ProjectStatus.IN_PROGRESS, 72,
                        date.today() - timedelta(days=110), date.today() + timedelta(days=12), diane, mukandoli)
     _task(db, di_proj, "Sensor API Integration", "Integrate MQTT feeds.", "DEVELOPMENT", TaskStatus.IN_PROGRESS, Priority.HIGH, 80, date.today() + timedelta(days=5), False)
+    _submission(db, di_proj, "IoT Architecture Overview", "Sensor topology and dashboard wireframes.", SubmissionStatus.SUBMITTED, days_ago=1, hour=9)
 
     patrick = _student(db, "Patrick Niyonsenga", "patrick.cyber@gmail.com", "202105000067",
                        "BSc Cybersecurity", "IT", "+250 788 300 306", student_password("202105000067"))
-    _project(db, "Deep Learning Intrusion Detection", "Network IDS using deep learning.",
+    patrick_proj = _project(db, "Deep Learning Intrusion Detection", "Network IDS using deep learning.",
              "Chapter 5", ProjectStatus.COMPLETED, 100,
              date.today() - timedelta(days=200), date.today() - timedelta(days=3), patrick, habimana)
+    _submission(db, patrick_proj, "Final Thesis Document", "Completed capstone thesis for examination.", SubmissionStatus.APPROVED, days_ago=15, hour=11)
 
     aline = _student(db, "Aline Uwimana", "aline.uwimana.study@gmail.com", "202205000210",
                      "BSc Software Engineering", "IT", "+250 788 300 307", student_password("202205000210"))
@@ -136,9 +139,10 @@ def seed_demo_data(db: Session) -> None:
 
     biz_st2 = _student(db, "Eric Nkurunziza", "eric.nkurunziza.mba@gmail.com", "202305000402",
                        "BBA Marketing", "BUSINESS", "+250 788 320 502", student_password("202305000402"))
-    _project(db, "Social Media ROI for Local Retail", "Measuring campaign effectiveness.",
+    biz_p2 = _project(db, "Social Media ROI for Local Retail", "Measuring campaign effectiveness.",
              "Chapter 2", ProjectStatus.IN_PROGRESS, 42,
              date.today() - timedelta(days=60), date.today() + timedelta(days=40), biz_st2, biz_mug)
+    _submission(db, biz_p2, "Market Research Summary", "Survey results from Kigali retailers.", SubmissionStatus.SUBMITTED, days_ago=2, hour=14, ext=".docx")
 
     # --- Education students ---
     edu_st1 = _student(db, "Marie Claire Ingabire", "marie.ingabire.edu@gmail.com", "202205000501",
@@ -150,9 +154,10 @@ def seed_demo_data(db: Session) -> None:
 
     edu_st2 = _student(db, "Samuel Bizimana", "samuel.bizimana.teacher@gmail.com", "202305000502",
                        "BEd Curriculum Studies", "EDUCATION", "+250 788 330 602", student_password("202305000502"))
-    _project(db, "Competency-Based Assessment Tools", "Rubrics aligned to CBC policy.",
+    edu_p2 = _project(db, "Competency-Based Assessment Tools", "Rubrics aligned to CBC policy.",
              "Chapter 2", ProjectStatus.REVISION, 35,
              date.today() - timedelta(days=45), date.today() + timedelta(days=50), edu_st2, edu_mut)
+    _submission(db, edu_p2, "Assessment Rubric Draft", "Draft rubrics for competency-based grading.", SubmissionStatus.NEEDS_REVISION, days_ago=5, hour=10)
 
     # --- Topic proposals (pending / approved / rejected) ---
     db.add(TopicProposal(
@@ -216,11 +221,11 @@ def seed_demo_data(db: Session) -> None:
     ))
 
     # --- Notifications ---
-    _notification(db, aggie, "Upcoming Deadline", "Final Design Submission is due in 18 days.",
+    _notification(db, faith, "Upcoming Deadline", "Final Design Submission is due in 18 days.",
                   NotificationType.DEADLINE, Priority.HIGH, False, "/student/progress")
-    _notification(db, aggie, "New Feedback Received", "Dr. Jean Bosco commented on your Literature Review.",
+    _notification(db, faith, "New Feedback Received", "Dr. Jean Bosco commented on your Literature Review.",
                   NotificationType.FEEDBACK, Priority.MEDIUM, False, "/student/feedback")
-    _notification(db, aggie, "Supervisor Assigned", "Dr. Jean Bosco is your capstone supervisor.",
+    _notification(db, faith, "Supervisor Assigned", "Dr. Jean Bosco is your capstone supervisor.",
                   NotificationType.ASSIGNMENT, Priority.LOW, True, "/student")
     _notification(db, hod_it, "Pending Topic Proposals", "3 IT applicants await your review.",
                   NotificationType.APPROVAL, Priority.HIGH, False, "/hod/proposals")
@@ -315,11 +320,18 @@ def _task(db, project, title, description, category, status, priority, progress,
     ))
 
 
-def _submission(db, project, title, notes, status, *, days_ago=0, hour=9):
-    slug = title.replace(" ", "_").replace("-", "_").lower()[:40]
-    stored_name = f"demo_{project.id}_{slug}.pdf"
-    file_name = title.replace(" ", "_").replace("-", "_") + ".pdf"
-    file_url = write_demo_pdf(stored_name, title)
+def _submission(db, project, title, notes, status, *, days_ago=0, hour=9, ext=".pdf"):
+    stored_name = stored_name_for_submission(project.id, title, ext)
+    file_name = f"{submission_slug(title)}{ext}"
+    student_name = project.student.full_name if project.student else "Student"
+    file_url = write_demo_submission_file(
+        stored_name,
+        title=title,
+        student_name=student_name,
+        project_title=project.title,
+        notes=notes,
+        force=True,
+    )
     submitted_at = utc_now().replace(tzinfo=None) - timedelta(days=days_ago)
     submitted_at = submitted_at.replace(hour=hour, minute=15, second=0, microsecond=0)
     s = Submission(

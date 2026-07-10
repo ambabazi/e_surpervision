@@ -515,7 +515,7 @@ cd backend && python reseed_db.py
 ### Featured student
 | Registration | Password | Notes |
 | ------------ | -------- | ----- |
-| `202305000078` | `202305000078` | Aggie Moraa — IT, supervisor Dr. Jean Bosco |
+| `202305000078` | `202305000078` | Faith Uwase — IT, supervisor Dr. Jean Bosco |
 
 ### Unassigned students (HOD assign testing)
 | Registration | Password | Department |

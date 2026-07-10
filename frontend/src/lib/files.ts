@@ -36,23 +36,45 @@ export function apiFilePath(fileUrl: string): string {
   return path.startsWith("/") ? path : `/${path}`;
 }
 
-export async function openAuthenticatedFile(fileUrl: string): Promise<void> {
+async function readBlobError(blob: Blob): Promise<string> {
+  try {
+    const text = await blob.text();
+    const data = JSON.parse(text) as { message?: string; detail?: string };
+    return data.message || data.detail || "Could not load document from server.";
+  } catch {
+    return "Could not load document from server.";
+  }
+}
+
+export async function fetchAuthenticatedFileBlob(
+  fileUrl: string,
+): Promise<{ blob: Blob; contentType: string; fileName: string }> {
   const response = await api.get(apiFilePath(fileUrl), { responseType: "blob" });
-  const contentType = (response.headers["content-type"] as string) || "application/pdf";
+  const contentType = (response.headers["content-type"] as string) || "application/octet-stream";
+  if (response.status >= 400 || contentType.includes("application/json")) {
+    throw new Error(await readBlobError(response.data as Blob));
+  }
   const blob = new Blob([response.data], { type: contentType });
+  const fileName = fileUrl.split("/").pop() || "document";
+  return { blob, contentType, fileName };
+}
+
+export async function openAuthenticatedFile(fileUrl: string): Promise<void> {
+  const { blob, contentType } = await fetchAuthenticatedFileBlob(fileUrl);
   const url = URL.createObjectURL(blob);
   window.open(url, "_blank", "noopener,noreferrer");
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  if (!contentType.includes("pdf")) {
+    URL.revokeObjectURL(url);
+  }
 }
 
 export async function downloadAuthenticatedFile(fileUrl: string, fileName?: string): Promise<void> {
-  const response = await api.get(apiFilePath(fileUrl), { responseType: "blob" });
-  const contentType = (response.headers["content-type"] as string) || "application/octet-stream";
-  const blob = new Blob([response.data], { type: contentType });
+  const { blob } = await fetchAuthenticatedFileBlob(fileUrl);
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = fileName || "submission";
+  link.download = fileName || fileUrl.split("/").pop() || "submission";
   document.body.appendChild(link);
   link.click();
   link.remove();

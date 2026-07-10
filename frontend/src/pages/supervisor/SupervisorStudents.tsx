@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Copy, Download, ExternalLink, FileText, Mail, Phone, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "@/lib/useApi";
-import { downloadAuthenticatedFile, openAuthenticatedFile } from "@/lib/files";
+import { DocumentPreviewModal } from "@/components/DocumentPreviewModal";
+import { downloadAuthenticatedFile } from "@/lib/files";
 import {
   Avatar,
   Card,
@@ -245,17 +246,16 @@ function StudentDetailModal({
 }) {
   const { project, submissions = [], pendingSubmissions } = student;
   const s = project.student;
-  const [openingId, setOpeningId] = useState<number | null>(null);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [preview, setPreview] = useState<{ fileUrl: string; fileName?: string; title: string } | null>(null);
 
-  const openDoc = async (submission: Submission) => {
+  const openDoc = (submission: Submission) => {
     if (!submission.fileUrl) return;
-    setOpeningId(submission.id);
-    try {
-      await openAuthenticatedFile(submission.fileUrl);
-    } finally {
-      setOpeningId(null);
-    }
+    setPreview({
+      fileUrl: submission.fileUrl,
+      fileName: submission.fileName,
+      title: submission.title,
+    });
   };
 
   const downloadDoc = async (submission: Submission) => {
@@ -341,10 +341,9 @@ function StudentDetailModal({
                           type="button"
                           className="btn-outline !py-1.5 text-xs"
                           onClick={() => openDoc(submission)}
-                          disabled={openingId === submission.id}
                         >
                           <ExternalLink size={14} />
-                          {openingId === submission.id ? "Opening..." : "Open"}
+                          Open
                         </button>
                         <button
                           type="button"
@@ -375,6 +374,14 @@ function StudentDetailModal({
           </button>
         </div>
       </div>
+      {preview && (
+        <DocumentPreviewModal
+          fileUrl={preview.fileUrl}
+          fileName={preview.fileName}
+          title={preview.title}
+          onClose={() => setPreview(null)}
+        />
+      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ from app.database import Base, SessionLocal, engine
 from app.hod_sync import sync_department_structure
 from app.migrate import backfill_notification_paths, migrate_schema, sync_student_registrations
 from app.seed import seed_demo_data
+from app.submission_files import ensure_all_submission_files
 
 
 TABLES = (
@@ -44,6 +45,8 @@ def main() -> int:
         sync_department_structure(db)
         backfill_notification_paths(db)
         sync_student_registrations(db)
+        restored = ensure_all_submission_files(db, force=True)
+        print(f"Wrote {restored} student submission document(s) to backend/uploads/.")
     finally:
         db.close()
     print("Done. Restart ./run.sh and sign in with README demo credentials.")
