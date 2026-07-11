@@ -307,10 +307,9 @@ def hod_students_list(db: Session, hod: User) -> list:
     from app.schemas import HodStudentRowOut
 
     dept = hod.department
-    q = db.query(User).filter(User.role == Role.STUDENT)
+    students = db.query(User).filter(User.role == Role.STUDENT).order_by(User.full_name.asc()).all()
     if dept:
-        q = q.filter(User.department == dept)
-    students = q.order_by(User.full_name.asc()).all()
+        students = [s for s in students if s.department == dept or _student_in_department(db, s, dept)]
 
     rows = []
     for st in students:
@@ -419,6 +418,8 @@ def create_submission(db: Session, student: User, *, title: str, notes: str | No
 
     if not file_name:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "A PDF or Word document is required.")
+    if not file_url:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A document upload is required.")
 
     ext = file_name[file_name.rfind(".") :].lower() if "." in file_name else ""
     if ext not in {".pdf", ".doc", ".docx"}:
@@ -520,15 +521,18 @@ def review_submission(db: Session, supervisor: User, submission_id: int, *, stat
     if student:
         student_email = student_notification_email(student.email)
         if student_email:
-            notify_submission_reviewed(
-                to=student_email,
-                full_name=student.full_name,
-                submission_title=submission.title,
-                review_status=submission.status.value,
-                feedback=feedback,
-                supervisor_name=supervisor.full_name,
-                project_progress=submission.project.progress if submission.project else None,
-            )
+            try:
+                notify_submission_reviewed(
+                    to=student_email,
+                    full_name=student.full_name,
+                    submission_title=submission.title,
+                    review_status=submission.status.value,
+                    feedback=feedback,
+                    supervisor_name=supervisor.full_name,
+                    project_progress=submission.project.progress if submission.project else None,
+                )
+            except Exception:
+                pass
 
     return submission_out(submission)
 
@@ -585,11 +589,19 @@ def hod_supervisor_projects(db: Session, supervisor_id: int) -> list:
     return [project_out(p) for p in projects if p]
 
 
-def hod_faculty_overview(db: Session):
+def hod_faculty_overview(db: Session, hod: User):
     from app.schemas import HodFacultyOverviewOut, SupervisorFacultyStatOut
 
-    supervisors = db.query(User).filter(User.role == Role.SUPERVISOR).all()
-    projects = db.query(Project).options(joinedload(Project.student)).all()
+    dept = hod.department
+    supervisors_q = db.query(User).filter(User.role == Role.SUPERVISOR)
+    if dept:
+        supervisors_q = supervisors_q.filter(User.department == dept)
+    supervisors = supervisors_q.all()
+
+    projects_q = db.query(Project).options(joinedload(Project.student), joinedload(Project.supervisor))
+    if dept:
+        projects_q = projects_q.join(User, Project.supervisor_id == User.id).filter(User.department == dept)
+    projects = projects_q.all()
 
     on_track = sum(1 for p in projects if p.status in (ProjectStatus.IN_PROGRESS, ProjectStatus.UNDER_REVIEW))
     at_risk = sum(1 for p in projects if p.status in (ProjectStatus.REVISION, ProjectStatus.ON_HOLD))
@@ -599,6 +611,8 @@ def hod_faculty_overview(db: Session):
     supervisor_stats = []
     for s in supervisors:
         s_projects = [p for p in projects if p.supervisor_id == s.id]
+        if dept and not s_projects:
+            continue
         avg = round(sum(p.progress for p in s_projects) / len(s_projects), 1) if s_projects else 0.0
         supervisor_stats.append(
             SupervisorFacultyStatOut(

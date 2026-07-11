@@ -45,7 +45,7 @@ export default function HodFacultyOverviewPage() {
       <div>
         <h1 className="text-2xl font-extrabold text-slate-800">Faculty Overview</h1>
         <p className="text-sm text-slate-500">
-          Department-wide performance analytics and supervisor comparisons.
+          Progress and performance for your department only.
         </p>
       </div>
 

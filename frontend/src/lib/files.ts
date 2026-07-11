@@ -51,6 +51,9 @@ export async function fetchAuthenticatedFileBlob(
 ): Promise<{ blob: Blob; contentType: string; fileName: string }> {
   const response = await api.get(apiFilePath(fileUrl), { responseType: "blob" });
   const contentType = (response.headers["content-type"] as string) || "application/octet-stream";
+  if (response.status === 404) {
+    throw new Error("Document file not found on the server. Ask the student to re-upload, or redeploy the backend.");
+  }
   if (response.status >= 400 || contentType.includes("application/json")) {
     throw new Error(await readBlobError(response.data as Blob));
   }

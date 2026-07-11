@@ -354,6 +354,15 @@ class CreateStudentRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+class UpdateHodStudentRequest(BaseModel):
+    full_name: str = Field(alias="fullName")
+    registration_number: Optional[str] = Field(None, alias="registrationNumber")
+    phone: Optional[str] = None
+    program: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class SupervisorStudentRequestCreate(BaseModel):
     message: str
 

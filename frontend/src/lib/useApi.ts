@@ -20,7 +20,14 @@ export function useApi<T>(url: string | null) {
         setError(null);
       })
       .catch((err) => {
-        setError(err?.response?.data?.message || "Failed to load data");
+        const data = err?.response?.data;
+        const detail = data?.detail;
+        const message =
+          data?.message ||
+          (typeof detail === "string" ? detail : null) ||
+          (err?.response?.status === 404 ? "This feature is not available on the server yet. Deploy the latest backend." : null) ||
+          "Failed to load data";
+        setError(message);
       })
       .finally(() => setLoading(false));
   }, [url]);

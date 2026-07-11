@@ -18,15 +18,16 @@ export function parseApiError(err: unknown, fallback: string): string {
   }
 
   const { status, data } = ax.response;
+  const detail = data?.detail;
+
   if (status === 404) {
-    return "API not found. Set VITE_API_URL to your Render URL with /api at the end.";
+    return (typeof detail === "string" ? detail : null) || "The requested resource was not found.";
   }
 
   if (typeof data?.message === "string" && data.message) {
     return data.message;
   }
 
-  const detail = data?.detail;
   if (typeof detail === "string") {
     return detail;
   }

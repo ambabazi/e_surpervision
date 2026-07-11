@@ -18,6 +18,7 @@ from app.models import ProposalStatus
 from app.schemas import (
     ApproveProposalRequest,
     AssignStudentSupervisorRequest,
+    UpdateHodStudentRequest,
     AuthResponse,
     CreateStudentRequest,
     FeedbackOut,
@@ -52,6 +53,7 @@ from app.proposal_services import (
     create_topic_proposal,
     hod_assign_student_supervisor,
     hod_create_student,
+    hod_update_student,
     hod_proposal_pipeline,
     list_hod_student_requests,
     list_public_supervisors,
@@ -62,7 +64,7 @@ from app.proposal_services import (
 )
 from app.hod_sync import sync_department_structure
 from app.departments import DEPARTMENT_LABELS, PROGRAMS_BY_DEPARTMENT, Department
-from app.migrate import backfill_notification_paths, migrate_schema, sync_student_registrations
+from app.migrate import backfill_notification_paths, migrate_schema, repair_demo_data, sync_student_registrations
 from app.seed import seed_demo_data, seed_sample_proposals
 from app.submission_files import ensure_all_submission_files
 from app.submission_policy import sort_submissions_by_priority
@@ -127,6 +129,7 @@ def startup():
         sync_department_structure(db)
         backfill_notification_paths(db)
         sync_student_registrations(db)
+        repair_demo_data(db)
         restored = ensure_all_submission_files(db)
         if restored:
             print(f"Ensured {restored} student submission file(s) on disk.")
@@ -366,8 +369,8 @@ def hod_dash(user: User = Depends(require_role(Role.HOD)), db: Session = Depends
 
 
 @app.get("/api/hod/faculty-overview", response_model=HodFacultyOverviewOut)
-def hod_faculty(_: User = Depends(require_role(Role.HOD)), db: Session = Depends(get_db)):
-    return hod_faculty_overview(db)
+def hod_faculty(user: User = Depends(require_role(Role.HOD)), db: Session = Depends(get_db)):
+    return hod_faculty_overview(db, user)
 
 
 @app.get("/api/hod/supervisors/{supervisor_id}/students", response_model=list[ProjectOut])
@@ -431,6 +434,16 @@ def hod_create_student_account(
     db: Session = Depends(get_db),
 ):
     return hod_create_student(db, body)
+
+
+@app.patch("/api/hod/students/{student_id}", response_model=UserOut)
+def hod_update_student_account(
+    student_id: int,
+    body: UpdateHodStudentRequest,
+    hod: User = Depends(require_role(Role.HOD)),
+    db: Session = Depends(get_db),
+):
+    return hod_update_student(db, hod, student_id, body)
 
 
 @app.post("/api/hod/students/{student_id}/assign-supervisor", response_model=UserOut)

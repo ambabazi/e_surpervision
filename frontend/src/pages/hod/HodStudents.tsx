@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Mail, Phone, UserPlus, UserCheck, X } from "lucide-react";
+import { Mail, Pencil, Phone, UserPlus, UserCheck, X } from "lucide-react";
 import { useApi } from "@/lib/useApi";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -17,6 +17,7 @@ export default function HodStudents() {
   const { data: supervisors } = useApi<PublicSupervisor[]>(supervisorUrl);
   const [showForm, setShowForm] = useState(false);
   const [assignStudent, setAssignStudent] = useState<HodStudentRow | null>(null);
+  const [editStudent, setEditStudent] = useState<HodStudentRow | null>(null);
 
   const unassigned = useMemo(
     () => (students || []).filter((s) => !s.isAssigned),
@@ -111,14 +112,23 @@ export default function HodStudents() {
                       )}
                     </td>
                     <td className="px-3 py-3">
-                      {!s.isAssigned && (
+                      <div className="flex gap-2">
                         <button
-                          className="btn-primary !px-2.5 !py-1.5 text-xs"
-                          onClick={() => setAssignStudent(s)}
+                          type="button"
+                          className="btn-outline !px-2.5 !py-1.5 text-xs"
+                          onClick={() => setEditStudent(s)}
                         >
-                          Assign
+                          <Pencil size={12} /> Edit
                         </button>
-                      )}
+                        {!s.isAssigned && (
+                          <button
+                            className="btn-primary !px-2.5 !py-1.5 text-xs"
+                            onClick={() => setAssignStudent(s)}
+                          >
+                            Assign
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -146,6 +156,17 @@ export default function HodStudents() {
           onClose={() => setAssignStudent(null)}
           onDone={() => {
             setAssignStudent(null);
+            reload();
+          }}
+        />
+      )}
+
+      {editStudent && (
+        <EditStudentModal
+          student={editStudent}
+          onClose={() => setEditStudent(null)}
+          onDone={() => {
+            setEditStudent(null);
             reload();
           }}
         />
@@ -373,6 +394,83 @@ function AssignSupervisorModal({
           <button className="btn-ghost" onClick={onClose}>Cancel</button>
           <button className="btn-primary" onClick={submit} disabled={busy || available.length === 0}>
             {busy ? "Assigning..." : "Assign now"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditStudentModal({
+  student,
+  onClose,
+  onDone,
+}: {
+  student: HodStudentRow;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [fullName, setFullName] = useState(student.fullName);
+  const [registrationNumber, setRegistrationNumber] = useState(student.registrationNumber || "");
+  const [phone, setPhone] = useState(student.phone || "");
+  const [program, setProgram] = useState(student.program || "");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const submit = async () => {
+    if (!fullName.trim()) {
+      setErr("Student name is required.");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      await api.patch(`/hod/students/${student.id}`, {
+        fullName: fullName.trim(),
+        registrationNumber: registrationNumber.trim() || undefined,
+        phone: phone.trim() || undefined,
+        program: program.trim() || undefined,
+      });
+      onDone();
+    } catch (e: unknown) {
+      setErr(parseApiError(e, "Failed to update student"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-soft">
+        <div className="mb-4 flex items-start justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-slate-800">Edit student</h3>
+            <p className="text-sm text-slate-500">Correct the student&apos;s name or contact details.</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <input className="input" placeholder="Full name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          <input
+            className="input font-mono"
+            placeholder="Registration number"
+            value={registrationNumber}
+            onChange={(e) => setRegistrationNumber(e.target.value.replace(/\D/g, "").slice(0, 12))}
+            maxLength={12}
+          />
+          <input className="input" placeholder="Programme" value={program} onChange={(e) => setProgram(e.target.value)} />
+          <input className="input" placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+        </div>
+
+        {err && <p className="mt-3 text-sm text-crimson-600">{err}</p>}
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button className="btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" onClick={submit} disabled={busy}>
+            {busy ? "Saving..." : "Save changes"}
           </button>
         </div>
       </div>

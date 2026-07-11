@@ -3,6 +3,8 @@ import { ExternalLink, FileText, X } from "lucide-react";
 import { useApi } from "@/lib/useApi";
 import { api } from "@/lib/api";
 import { DocumentPreviewModal } from "@/components/DocumentPreviewModal";
+import { parseApiError } from "@/lib/errors";
+import { Toast, type ToastKind } from "@/components/Toast";
 import {
   Avatar,
   Card,
@@ -31,6 +33,7 @@ export default function SupervisorReviews() {
   const { data, loading, error, reload } = useApi<Submission[]>("/supervisor/reviews");
   const [active, setActive] = useState<Submission | null>(null);
   const [preview, setPreview] = useState<Submission | null>(null);
+  const [toast, setToast] = useState<{ message: string; kind: ToastKind } | null>(null);
 
   const openDoc = (submission: Submission) => {
     if (!submission.fileUrl) return;
@@ -44,6 +47,10 @@ export default function SupervisorReviews() {
 
   return (
     <div className="space-y-6">
+      {toast && (
+        <Toast message={toast.message} kind={toast.kind} onClose={() => setToast(null)} />
+      )}
+
       <div>
         <h1 className="text-2xl font-extrabold text-slate-800">Submission Reviews</h1>
         <p className="text-sm text-slate-500">
@@ -108,6 +115,7 @@ export default function SupervisorReviews() {
             setActive(null);
             reload();
           }}
+          onError={(message) => setToast({ message, kind: "error" })}
           onPreview={(submission) => setPreview(submission)}
         />
       )}
@@ -119,11 +127,13 @@ function ReviewModal({
   submission,
   onClose,
   onDone,
+  onError,
   onPreview,
 }: {
   submission: Submission;
   onClose: () => void;
   onDone: () => void;
+  onError: (message: string) => void;
   onPreview: (submission: Submission) => void;
 }) {
   const [status, setStatus] = useState<SubmissionStatus>("APPROVED");
@@ -138,6 +148,8 @@ function ReviewModal({
         feedback,
       });
       onDone();
+    } catch (e: unknown) {
+      onError(parseApiError(e, "Failed to submit review"));
     } finally {
       setBusy(false);
     }

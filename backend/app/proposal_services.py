@@ -31,6 +31,7 @@ from app.schemas import (
     TopicOptionOut,
     TopicProposalCreateRequest,
     TopicProposalOut,
+    UpdateHodStudentRequest,
     UserOut,
 )
 from app.services import user_out, supervisor_load, DEFAULT_CAPACITY
@@ -471,6 +472,34 @@ def hod_create_student(db: Session, body: CreateStudentRequest) -> UserOut:
             action_path="/supervisor/students",
         )
     )
+    db.commit()
+    db.refresh(student)
+    return user_out(student)
+
+
+def hod_update_student(db: Session, hod: User, student_id: int, body: UpdateHodStudentRequest) -> UserOut:
+    from app.demo_credentials import format_registration_number
+    from app.services import _student_in_department, user_out
+
+    student = db.query(User).filter(User.id == student_id, User.role == Role.STUDENT).first()
+    if not student:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Student not found")
+
+    if hod.department and student.department != hod.department and not _student_in_department(db, student, hod.department):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "This student is not in your department")
+
+    name = body.full_name.strip()
+    if not name:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Student name is required")
+    student.full_name = name
+
+    if body.phone is not None:
+        student.phone = body.phone.strip() or None
+    if body.program:
+        student.program = body.program.strip()
+    if body.registration_number:
+        student.registration_number = format_registration_number(body.registration_number.strip())
+
     db.commit()
     db.refresh(student)
     return user_out(student)

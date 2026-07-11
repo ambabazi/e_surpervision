@@ -1,8 +1,10 @@
 from sqlalchemy import inspect
+from pathlib import Path
 
 from app.auth import hash_password, verify_password
 from app.demo_credentials import STAFF_DEFAULT_PASSWORD, format_registration_number, student_password
-from app.models import Role, User
+from app.files import UPLOAD_DIR
+from app.models import Project, Role, User
 
 
 def migrate_schema(engine):
@@ -89,3 +91,63 @@ def sync_student_registrations(db):
 
     if changed:
         db.commit()
+
+
+def repair_demo_data(db) -> None:
+    """Fix legacy names, remove file-less submissions, and restore missing upload files."""
+    from sqlalchemy.orm import joinedload
+
+    from app.models import Feedback, Submission
+    from app.submission_files import ensure_all_submission_files, write_demo_submission_file
+
+    changed = False
+
+    for user in db.query(User).all():
+        if user.full_name == "Aggie Moraa":
+            user.full_name = "Faith Uwase"
+            if user.email == "aggie.moraa.capstone@gmail.com":
+                user.email = "faith.uwase.capstone@gmail.com"
+            changed = True
+        if user.full_name == "Dr. Morris Moraa":
+            user.full_name = "Dr. Morris Kagabo"
+            changed = True
+
+    orphan_submissions = (
+        db.query(Submission)
+        .filter((Submission.file_url.is_(None)) | (Submission.file_name.is_(None)))
+        .all()
+    )
+    for submission in orphan_submissions:
+        db.query(Feedback).filter(Feedback.submission_id == submission.id).update(
+            {"submission_id": None},
+            synchronize_session=False,
+        )
+        db.delete(submission)
+        changed = True
+
+    if changed:
+        db.commit()
+
+    submissions = (
+        db.query(Submission)
+        .options(joinedload(Submission.project).joinedload(Project.student))
+        .filter(Submission.file_url.isnot(None))
+        .all()
+    )
+    for submission in submissions:
+        filename = submission.file_url.split("/")[-1]
+        path = UPLOAD_DIR / filename
+        if path.exists():
+            continue
+        student_name = submission.project.student.full_name if submission.project and submission.project.student else "Student"
+        project_title = submission.project.title if submission.project else "Capstone Project"
+        write_demo_submission_file(
+            filename,
+            title=submission.title,
+            student_name=student_name,
+            project_title=project_title,
+            notes=submission.notes or "Submitted via the E-Supervision Portal.",
+            force=True,
+        )
+
+    ensure_all_submission_files(db, force=True)
