@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { Download, ExternalLink, X } from "lucide-react";
-import { downloadAuthenticatedFile, fetchAuthenticatedFileBlob } from "@/lib/files";
+import {
+  downloadAuthenticatedFile,
+  fetchAuthenticatedFileBlob,
+  isDocxDocument,
+  isPdfDocument,
+  openDocumentInNewTab,
+  wordBlobToHtml,
+} from "@/lib/files";
 
 export function DocumentPreviewModal({
   fileUrl,
@@ -14,10 +21,12 @@ export function DocumentPreviewModal({
   onClose: () => void;
 }) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [wordHtml, setWordHtml] = useState<string | null>(null);
   const [contentType, setContentType] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [downloading, setDownloading] = useState(false);
+  const [opening, setOpening] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -26,12 +35,21 @@ export function DocumentPreviewModal({
     (async () => {
       setLoading(true);
       setError("");
+      setWordHtml(null);
+      setPreviewUrl(null);
       try {
         const { blob, contentType: type } = await fetchAuthenticatedFileBlob(fileUrl);
         if (!active) return;
-        objectUrl = URL.createObjectURL(blob);
-        setPreviewUrl(objectUrl);
         setContentType(type);
+
+        if (isPdfDocument(type, fileUrl)) {
+          objectUrl = URL.createObjectURL(blob);
+          setPreviewUrl(objectUrl);
+        } else if (isDocxDocument(type, fileUrl)) {
+          const html = await wordBlobToHtml(blob);
+          if (!active) return;
+          setWordHtml(html);
+        }
       } catch (err: unknown) {
         if (!active) return;
         setError(err instanceof Error ? err.message : "Could not load this document from the server.");
@@ -57,11 +75,19 @@ export function DocumentPreviewModal({
     }
   };
 
-  const openInTab = () => {
-    if (previewUrl) window.open(previewUrl, "_blank", "noopener,noreferrer");
+  const openInTab = async () => {
+    setOpening(true);
+    setError("");
+    try {
+      await openDocumentInNewTab(fileUrl, { fileName, title });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Could not open document.");
+    } finally {
+      setOpening(false);
+    }
   };
 
-  const isPdf = contentType.includes("pdf") || fileUrl.toLowerCase().endsWith(".pdf");
+  const canOpen = isPdfDocument(contentType, fileUrl) || isDocxDocument(contentType, fileUrl) || wordHtml || previewUrl;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
@@ -72,15 +98,16 @@ export function DocumentPreviewModal({
             <p className="truncate text-sm text-slate-500">{fileName || "Student submission"}</p>
           </div>
           <div className="flex shrink-0 gap-2">
+            {canOpen && (
+              <button type="button" className="btn-primary !py-1.5 text-xs" onClick={openInTab} disabled={opening || loading}>
+                <ExternalLink size={14} />
+                {opening ? "Opening..." : "Open"}
+              </button>
+            )}
             <button type="button" className="btn-outline !py-1.5 text-xs" onClick={download} disabled={downloading}>
               <Download size={14} />
               {downloading ? "Saving..." : "Download"}
             </button>
-            {previewUrl && (
-              <button type="button" className="btn-outline !py-1.5 text-xs" onClick={openInTab}>
-                <ExternalLink size={14} /> New tab
-              </button>
-            )}
             <button type="button" className="rounded-lg p-2 hover:bg-slate-100" onClick={onClose}>
               <X size={18} />
             </button>
@@ -94,18 +121,19 @@ export function DocumentPreviewModal({
               {error}
             </div>
           )}
-          {!loading && !error && previewUrl && isPdf && (
+          {!loading && !error && previewUrl && (
             <iframe title={title} src={previewUrl} className="h-[70vh] w-full rounded-xl border border-slate-200 bg-white" />
           )}
-          {!loading && !error && previewUrl && !isPdf && (
+          {!loading && !error && wordHtml && (
+            <div
+              className="prose prose-slate h-[70vh] max-w-none overflow-y-auto rounded-xl border border-slate-200 bg-white p-6 text-sm"
+              dangerouslySetInnerHTML={{ __html: wordHtml }}
+            />
+          )}
+          {!loading && !error && !previewUrl && !wordHtml && (
             <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
-              <p className="font-semibold text-slate-800">Word document ready</p>
-              <p className="mt-2">
-                This submission is a Word file. Use <strong>Download</strong> to save it, then open it in Word or LibreOffice.
-              </p>
-              <button type="button" className="btn-primary mt-4 !py-2 text-xs" onClick={download} disabled={downloading}>
-                <Download size={14} /> Download document
-              </button>
+              <p className="font-semibold text-slate-800">Document loaded</p>
+              <p className="mt-2">Use <strong>Open</strong> to view in a new browser tab, or <strong>Download</strong> to save the file.</p>
             </div>
           )}
         </div>

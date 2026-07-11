@@ -3,6 +3,7 @@ import { FileText, Plus, Upload, X } from "lucide-react";
 import { useApi } from "@/lib/useApi";
 import { api } from "@/lib/api";
 import { formatFileSize, validateSubmissionFile } from "@/lib/files";
+import { parseApiError } from "@/lib/errors";
 import {
   Card,
   EmptyState,
@@ -67,12 +68,10 @@ export default function StudentSubmissions() {
         kind: "success",
       });
     } catch (err: unknown) {
-      const ax = err as { response?: { data?: { message?: string; detail?: string } } };
-      const message =
-        ax.response?.data?.message ||
-        ax.response?.data?.detail ||
-        "Submission failed. Please check your file and try again.";
-      setToast({ message, kind: "error" });
+      setToast({
+        message: parseApiError(err, "Submission failed. Please check your file and try again."),
+        kind: "error",
+      });
     } finally {
       setBusy(false);
     }

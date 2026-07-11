@@ -464,12 +464,15 @@ def create_submission(db: Session, student: User, *, title: str, notes: str | No
 
     student_email = student_notification_email(student.email)
     if student_email:
-        notify_submission_received(
-            to=student_email,
-            full_name=student.full_name,
-            submission_title=title,
-            project_title=project.title,
-        )
+        try:
+            notify_submission_received(
+                to=student_email,
+                full_name=student.full_name,
+                submission_title=title,
+                project_title=project.title,
+            )
+        except Exception:
+            pass
 
     return submission_out(submission)
 

@@ -11,6 +11,9 @@ export function parseApiError(err: unknown, fallback: string): string {
   };
 
   if (!ax.response) {
+    if (ax.message?.includes("timeout") || ax.code === "ECONNABORTED") {
+      return "The server took too long to respond. On the free Render plan it may be waking up — wait a moment and try again.";
+    }
     if (ax.message?.includes("Network Error")) {
       return "Cannot reach the server. Check VITE_API_URL ends with /api and redeploy Vercel.";
     }

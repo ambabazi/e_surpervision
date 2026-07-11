@@ -1,3 +1,4 @@
+import mammoth from "mammoth";
 import { api } from "./api";
 
 const ALLOWED = [".pdf", ".doc", ".docx"] as const;
@@ -62,14 +63,85 @@ export async function fetchAuthenticatedFileBlob(
   return { blob, contentType, fileName };
 }
 
-export async function openAuthenticatedFile(fileUrl: string): Promise<void> {
-  const { blob, contentType } = await fetchAuthenticatedFileBlob(fileUrl);
+export function isPdfDocument(contentType: string, fileUrl: string): boolean {
+  return contentType.includes("pdf") || fileUrl.toLowerCase().endsWith(".pdf");
+}
+
+export function isDocxDocument(contentType: string, fileUrl: string): boolean {
+  const lower = fileUrl.toLowerCase();
+  return (
+    contentType.includes("wordprocessingml") ||
+    lower.endsWith(".docx")
+  );
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+export async function wordBlobToHtml(blob: Blob): Promise<string> {
+  const arrayBuffer = await blob.arrayBuffer();
+  const result = await mammoth.convertToHtml({ arrayBuffer });
+  return result.value;
+}
+
+export function openHtmlDocumentInNewTab(html: string, documentTitle: string): void {
+  const page = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(documentTitle)}</title>
+  <style>
+    body { font-family: Georgia, "Times New Roman", serif; max-width: 800px; margin: 2rem auto; padding: 0 1.5rem; line-height: 1.65; color: #1e293b; }
+    h1, h2, h3 { color: #0f172a; }
+    p { margin: 0 0 1rem; }
+  </style>
+</head>
+<body>${html}</body>
+</html>`;
+  const blob = new Blob([page], { type: "text/html;charset=utf-8" });
   const url = URL.createObjectURL(blob);
-  window.open(url, "_blank", "noopener,noreferrer");
-  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  if (!contentType.includes("pdf")) {
+  const win = window.open(url, "_blank", "noopener,noreferrer");
+  if (!win) {
     URL.revokeObjectURL(url);
+    throw new Error("Pop-up blocked. Allow pop-ups for this site to open the document.");
   }
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+export async function openDocumentInNewTab(
+  fileUrl: string,
+  options?: { fileName?: string; title?: string },
+): Promise<void> {
+  const { blob, contentType } = await fetchAuthenticatedFileBlob(fileUrl);
+  const docTitle = options?.title || options?.fileName || "Student submission";
+
+  if (isPdfDocument(contentType, fileUrl)) {
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, "_blank", "noopener,noreferrer");
+    if (!win) {
+      URL.revokeObjectURL(url);
+      throw new Error("Pop-up blocked. Allow pop-ups for this site to open the document.");
+    }
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    return;
+  }
+
+  if (isDocxDocument(contentType, fileUrl)) {
+    const html = await wordBlobToHtml(blob);
+    openHtmlDocumentInNewTab(html, docTitle);
+    return;
+  }
+
+  throw new Error("In-browser preview is available for PDF and .docx files. Use Download for older .doc files.");
+}
+
+export async function openAuthenticatedFile(fileUrl: string, options?: { fileName?: string; title?: string }): Promise<void> {
+  await openDocumentInNewTab(fileUrl, options);
 }
 
 export async function downloadAuthenticatedFile(fileUrl: string, fileName?: string): Promise<void> {

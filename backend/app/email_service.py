@@ -12,18 +12,21 @@ GMAIL_PATTERN = re.compile(r"@(gmail|googlemail)\.com$", re.IGNORECASE)
 
 def send_email(*, to: str, subject: str, body: str) -> None:
     if settings.mail_enabled and settings.smtp_host:
-        msg = EmailMessage()
-        msg["From"] = settings.mail_from
-        msg["To"] = to
-        msg["Subject"] = subject
-        msg.set_content(body)
-        with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
-            if settings.smtp_use_tls:
-                server.starttls()
-            if settings.smtp_user and settings.smtp_password:
-                server.login(settings.smtp_user, settings.smtp_password)
-            server.send_message(msg)
-        logger.info("Email sent to %s: %s", to, subject)
+        try:
+            msg = EmailMessage()
+            msg["From"] = settings.mail_from
+            msg["To"] = to
+            msg["Subject"] = subject
+            msg.set_content(body)
+            with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as server:
+                if settings.smtp_use_tls:
+                    server.starttls()
+                if settings.smtp_user and settings.smtp_password:
+                    server.login(settings.smtp_user, settings.smtp_password)
+                server.send_message(msg)
+            logger.info("Email sent to %s: %s", to, subject)
+        except Exception as exc:
+            logger.warning("Email to %s failed (submission still saved): %s", to, exc)
         return
 
     logger.info(

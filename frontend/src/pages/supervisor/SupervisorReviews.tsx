@@ -3,6 +3,7 @@ import { ExternalLink, FileText, X } from "lucide-react";
 import { useApi } from "@/lib/useApi";
 import { api } from "@/lib/api";
 import { DocumentPreviewModal } from "@/components/DocumentPreviewModal";
+import { openDocumentInNewTab } from "@/lib/files";
 import { parseApiError } from "@/lib/errors";
 import { Toast, type ToastKind } from "@/components/Toast";
 import {
@@ -34,8 +35,24 @@ export default function SupervisorReviews() {
   const [active, setActive] = useState<Submission | null>(null);
   const [preview, setPreview] = useState<Submission | null>(null);
   const [toast, setToast] = useState<{ message: string; kind: ToastKind } | null>(null);
+  const [openingId, setOpeningId] = useState<number | null>(null);
 
-  const openDoc = (submission: Submission) => {
+  const openDoc = async (submission: Submission) => {
+    if (!submission.fileUrl) return;
+    setOpeningId(submission.id);
+    try {
+      await openDocumentInNewTab(submission.fileUrl, {
+        fileName: submission.fileName,
+        title: submission.title,
+      });
+    } catch (e: unknown) {
+      setToast({ message: parseApiError(e, "Could not open document"), kind: "error" });
+    } finally {
+      setOpeningId(null);
+    }
+  };
+
+  const previewDoc = (submission: Submission) => {
     if (!submission.fileUrl) return;
     setPreview(submission);
   };
@@ -80,13 +97,19 @@ export default function SupervisorReviews() {
               </div>
               <StatusBadge status={s.status} />
               {s.fileUrl ? (
-                <button
-                  className="btn-outline !py-2 text-xs"
-                  onClick={() => openDoc(s)}
-                >
-                  <ExternalLink size={14} />
-                  Open document
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    className="btn-primary !py-2 text-xs"
+                    onClick={() => openDoc(s)}
+                    disabled={openingId === s.id}
+                  >
+                    <ExternalLink size={14} />
+                    {openingId === s.id ? "Opening..." : "Open"}
+                  </button>
+                  <button className="btn-outline !py-2 text-xs" onClick={() => previewDoc(s)}>
+                    Preview
+                  </button>
+                </div>
               ) : (
                 <span className="text-xs text-slate-400">No file attached</span>
               )}
@@ -160,6 +183,18 @@ function ReviewModal({
     onPreview(submission);
   };
 
+  const openInTab = async () => {
+    if (!submission.fileUrl) return;
+    try {
+      await openDocumentInNewTab(submission.fileUrl, {
+        fileName: submission.fileName,
+        title: submission.title,
+      });
+    } catch (e: unknown) {
+      onError(parseApiError(e, "Could not open document"));
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-soft">
@@ -179,10 +214,15 @@ function ReviewModal({
         </div>
 
         {submission.fileUrl && (
-          <button className="btn-outline mb-4 w-full !py-2 text-xs" onClick={openDoc}>
-            <ExternalLink size={14} />
-            {`Open ${submission.fileName || "document"}`}
-          </button>
+          <div className="mb-4 grid grid-cols-2 gap-2">
+            <button className="btn-primary w-full !py-2 text-xs" onClick={openInTab}>
+              <ExternalLink size={14} />
+              Open
+            </button>
+            <button className="btn-outline w-full !py-2 text-xs" onClick={openDoc}>
+              Preview
+            </button>
+          </div>
         )}
 
         <label className="mb-1.5 block text-sm font-medium text-slate-700">Decision</label>
