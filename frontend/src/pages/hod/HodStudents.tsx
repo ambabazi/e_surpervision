@@ -33,7 +33,7 @@ export default function HodStudents() {
         <div>
           <h1 className="text-2xl font-extrabold text-slate-800">Students</h1>
           <p className="text-sm text-slate-500">
-            Full student records for your department — use this to assign supervisors immediately.
+            Full student records for your department — assign supervisors and view capstone topics.
           </p>
         </div>
         <div className="flex gap-2">
@@ -69,13 +69,14 @@ export default function HodStudents() {
           <EmptyState message="No students in your department yet." />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
+            <table className="w-full min-w-[820px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
                   <th className="px-3 py-2">Student</th>
                   <th className="px-3 py-2">Reg number</th>
                   <th className="px-3 py-2">Contact</th>
                   <th className="px-3 py-2">Programme</th>
+                  <th className="px-3 py-2">Topic</th>
                   <th className="px-3 py-2">Supervisor</th>
                   <th className="px-3 py-2">Status</th>
                   <th className="px-3 py-2"></th>
@@ -99,6 +100,9 @@ export default function HodStudents() {
                       <p className="text-xs text-slate-400">{s.phone || "No phone"}</p>
                     </td>
                     <td className="px-3 py-3 text-slate-600">{s.program || "—"}</td>
+                    <td className="px-3 py-3 font-medium text-slate-800">
+                      {s.approvedTopic || s.projectTitle || "—"}
+                    </td>
                     <td className="px-3 py-3 text-slate-600">
                       {s.supervisor?.fullName || (
                         <span className="text-crimson-600">Not assigned</span>
@@ -202,6 +206,10 @@ function StudentInfoCard({
         <div>
           <dt className="text-slate-400">Department</dt>
           <dd>{student.department || "—"}</dd>
+        </div>
+        <div>
+          <dt className="text-slate-400">Topic</dt>
+          <dd className="font-medium text-slate-800">{student.approvedTopic || student.projectTitle || "—"}</dd>
         </div>
         <div className="sm:col-span-2">
           <dt className="text-slate-400">Email</dt>
@@ -323,7 +331,9 @@ function AssignSupervisorModal({
     [supervisors],
   );
   const [supervisorId, setSupervisorId] = useState(String(available[0]?.id || ""));
-  const [projectTitle, setProjectTitle] = useState(student.projectTitle || student.program || "E-Supervision Project");
+  const [projectTitle, setProjectTitle] = useState(
+    student.approvedTopic || student.projectTitle || student.program || "Capstone Project",
+  );
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -365,6 +375,7 @@ function AssignSupervisorModal({
           <div><dt className="text-slate-400">Department</dt><dd>{student.department || "—"}</dd></div>
           <div className="sm:col-span-2"><dt className="text-slate-400">Email</dt><dd>{student.email}</dd></div>
           <div className="sm:col-span-2"><dt className="text-slate-400">Phone</dt><dd>{student.phone || "Not provided"}</dd></div>
+          <div className="sm:col-span-2"><dt className="text-slate-400">Topic</dt><dd>{student.approvedTopic || student.projectTitle || "—"}</dd></div>
           <div className="sm:col-span-2"><dt className="text-slate-400">Programme</dt><dd>{student.program || "—"}</dd></div>
         </dl>
 

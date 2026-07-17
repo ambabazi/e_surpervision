@@ -197,6 +197,15 @@ class TopicProposal(Base):
     assigned_supervisor = relationship("User", foreign_keys=[assigned_supervisor_id])
 
 
+class ReferenceTopic(Base):
+    __tablename__ = "reference_topics"
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String, nullable=False)
+    description = Column(Text)
+    department = Column(String, nullable=False, index=True)
+
+
 class SupervisorStudentRequest(Base):
     __tablename__ = "supervisor_student_requests"
 

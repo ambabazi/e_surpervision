@@ -65,6 +65,7 @@ from app.proposal_services import (
 from app.hod_sync import sync_department_structure
 from app.departments import DEPARTMENT_LABELS, PROGRAMS_BY_DEPARTMENT, Department
 from app.migrate import backfill_notification_paths, migrate_schema, repair_demo_data, sync_student_registrations
+from app.reference_topics import ensure_reference_topics
 from app.seed import seed_demo_data, seed_sample_proposals
 from app.submission_files import ensure_all_submission_files
 from app.submission_policy import sort_submissions_by_priority
@@ -126,6 +127,7 @@ def startup():
     try:
         seed_demo_data(db)
         seed_sample_proposals(db)
+        ensure_reference_topics(db)
         sync_department_structure(db)
         backfill_notification_paths(db)
         sync_student_registrations(db)

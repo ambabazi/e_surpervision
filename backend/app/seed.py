@@ -86,7 +86,7 @@ def seed_demo_data(db: Session) -> None:
 
     # Extra same-day pending reviews for Jean Bosco (morning before afternoon priority demo)
     _submission(db, faith_project, "Chapter 3 - System Design", "Architecture and UI wireframes.", SubmissionStatus.SUBMITTED, days_ago=0, hour=8)
-    _submission(db, faith_project, "Weekly Progress Report", "Sprint summary for supervisor.", SubmissionStatus.SUBMITTED, days_ago=0, hour=17, ext=".docx")
+    _submission(db, faith_project, "Weekly Progress Report", "Sprint summary for supervisor.", SubmissionStatus.SUBMITTED, days_ago=0, hour=17, ext=".pdf")
 
     leon = _student(db, "Leon Kagabo", "leon.kagabo.access@gmail.com", "202205000201",
                     "BSc Software Engineering", "IT", "+250 788 300 304", student_password("202205000201"))
@@ -142,7 +142,7 @@ def seed_demo_data(db: Session) -> None:
     biz_p2 = _project(db, "Social Media ROI for Local Retail", "Measuring campaign effectiveness.",
              "Chapter 2", ProjectStatus.IN_PROGRESS, 42,
              date.today() - timedelta(days=60), date.today() + timedelta(days=40), biz_st2, biz_mug)
-    _submission(db, biz_p2, "Market Research Summary", "Survey results from Kigali retailers.", SubmissionStatus.SUBMITTED, days_ago=2, hour=14, ext=".docx")
+    _submission(db, biz_p2, "Market Research Summary", "Survey results from Kigali retailers.", SubmissionStatus.SUBMITTED, days_ago=2, hour=14, ext=".pdf")
 
     # --- Education students ---
     edu_st1 = _student(db, "Marie Claire Ingabire", "marie.ingabire.edu@gmail.com", "202205000501",
@@ -164,11 +164,38 @@ def seed_demo_data(db: Session) -> None:
         full_name="Samuel Nkurunziza", email="samuel.nkurunziza@gmail.com",
         registration_number="202305000150", phone="+250 788 400 401",
         program="BSc Software Engineering", department="IT",
-        topic_1="AI Student Advising Chatbot", abstract_1="NLP chatbot for course planning.",
-        topic_2="Campus Navigation App", abstract_2="Cross-platform campus navigation.",
-        topic_3="Thesis Format Checker", abstract_3="Automated thesis validation.",
+        topic_1="AI Student Advising Chatbot", abstract_1="NLP chatbot for course planning and degree progress.",
+        topic_2="Campus Navigation App", abstract_2="Cross-platform indoor and outdoor campus navigation.",
+        topic_3="Thesis Format Checker", abstract_3="Automated thesis structure and citation validation.",
         supervisor_choice_1_id=bosco.id, supervisor_choice_2_id=mukandoli.id,
         status=ProposalStatus.PENDING,
+    ))
+    db.add(TopicProposal(
+        full_name="Brigitte Uwase", email="brigitte.uwase@gmail.com",
+        registration_number="202305000148", phone="+250 788 400 398",
+        program="BSc Software Engineering", department="IT",
+        topic_1="Smart Irrigation for Campus Gardens",
+        abstract_1="IoT soil-moisture sensors and automated watering for university green spaces.",
+        topic_2="NFC Secure Parcel Locker for Campus Deliveries",
+        abstract_2="Anti-tamper NFC delivery boxes for high-value student parcels on campus.",
+        topic_3="Kinyarwanda Study Buddy Chatbot",
+        abstract_3="AI companion for Kinyarwanda vocabulary and conversational practice.",
+        supervisor_choice_1_id=mukandoli.id, supervisor_choice_2_id=nshuti.id,
+        status=ProposalStatus.PENDING,
+    ))
+    db.add(TopicProposal(
+        full_name="Francine Murekatete", email="francine.murekatete@gmail.com",
+        registration_number="202305000142", phone="+250 788 400 392",
+        program="BSc Software Engineering", department="IT",
+        topic_1="Campus Event Ticketing Platform", abstract_1="Online ticketing for university events.",
+        topic_2="Library Seat Booking System", abstract_2="Real-time study space reservation app.",
+        topic_3="Inter-University Transcript Portal",
+        abstract_3="Digital academic transcript exchange between Rwandan universities.",
+        supervisor_choice_1_id=mukandoli.id, supervisor_choice_2_id=bosco.id,
+        status=ProposalStatus.APPROVED,
+        selected_topic_index=3,
+        assigned_supervisor_id=mukandoli.id,
+        rejection_reason=None,
     ))
     db.add(TopicProposal(
         full_name="Divine Uwimana", email="divine.uwimana@gmail.com",
@@ -194,11 +221,21 @@ def seed_demo_data(db: Session) -> None:
         full_name="Rejected Applicant", email="rejected.applicant@gmail.com",
         registration_number="202305000199", phone="+250 788 400 499",
         program="BSc Software Engineering", department="IT",
-        topic_1="Generic Web App", abstract_1="A simple CRUD app.",
-        topic_2="Todo List Clone", abstract_2="Another todo app.",
-        topic_3="Blog Platform", abstract_3="Basic blogging site.",
+        topic_1="Generic Web App", abstract_1="A simple CRUD application with login.",
+        topic_2="Todo List Clone", abstract_2="Another task list application.",
+        topic_3="Blog Platform", abstract_3="Basic blogging website with comments.",
         supervisor_choice_1_id=bosco.id, supervisor_choice_2_id=habimana.id,
         status=ProposalStatus.REJECTED, rejection_reason="Topics lack academic depth and originality.",
+    ))
+    db.add(TopicProposal(
+        full_name="Test User", email="test.user@gmail.com",
+        registration_number="202305000198", phone="+250 788 400 498",
+        program="BSc Software Engineering", department="IT",
+        topic_1="Smart Vending Machine App", abstract_1="Mobile app for canteen vending inventory.",
+        topic_2="Unity Scholar Clone", abstract_2="Gamified learning platform copy.",
+        topic_3="Grant Management Dashboard", abstract_3="NGO grant tracking system.",
+        supervisor_choice_1_id=bosco.id, supervisor_choice_2_id=mukandoli.id,
+        status=ProposalStatus.REJECTED, rejection_reason="Topics already developed.",
     ))
 
     # --- Supervisor ↔ HOD requests ---
@@ -227,7 +264,7 @@ def seed_demo_data(db: Session) -> None:
                   NotificationType.FEEDBACK, Priority.MEDIUM, False, "/student/feedback")
     _notification(db, faith, "Supervisor Assigned", "Dr. Jean Bosco is your capstone supervisor.",
                   NotificationType.ASSIGNMENT, Priority.LOW, True, "/student")
-    _notification(db, hod_it, "Pending Topic Proposals", "3 IT applicants await your review.",
+    _notification(db, hod_it, "Pending Topic Proposals", "4 IT applicants await your review.",
                   NotificationType.APPROVAL, Priority.HIGH, False, "/hod/proposals")
     _notification(db, hod_law, "Pending Topic Proposals", "1 law applicant awaits review.",
                   NotificationType.APPROVAL, Priority.MEDIUM, False, "/hod/proposals")

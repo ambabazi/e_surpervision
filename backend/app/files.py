@@ -5,11 +5,9 @@ from pathlib import Path
 from fastapi import HTTPException, UploadFile, status
 
 UPLOAD_DIR = Path(__file__).resolve().parent.parent / "uploads"
-ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx"}
+ALLOWED_EXTENSIONS = {".pdf"}
 ALLOWED_MIME = {
     "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/octet-stream",
 }
 MAX_BYTES = 10 * 1024 * 1024
@@ -71,13 +69,13 @@ def validate_upload(file: UploadFile) -> None:
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            "Only PDF and Word documents (.pdf, .doc, .docx) are allowed.",
+            "Only PDF documents (.pdf) are allowed.",
         )
 
     if file.content_type and file.content_type not in ALLOWED_MIME:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            "Invalid file type. Please upload a PDF or Word document.",
+            "Invalid file type. Please upload a PDF document.",
         )
 
 

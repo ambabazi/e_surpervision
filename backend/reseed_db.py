@@ -6,6 +6,7 @@ from sqlalchemy import inspect, text
 from app.database import Base, SessionLocal, engine
 from app.hod_sync import sync_department_structure
 from app.migrate import backfill_notification_paths, migrate_schema, repair_demo_data, sync_student_registrations
+from app.reference_topics import ensure_reference_topics
 from app.seed import seed_demo_data
 from app.submission_files import ensure_all_submission_files
 
@@ -17,6 +18,7 @@ TABLES = (
     "tasks",
     "supervisor_student_requests",
     "topic_proposals",
+    "reference_topics",
     "projects",
     "users",
 )
@@ -42,6 +44,7 @@ def main() -> int:
     try:
         print("Seeding rich demo dataset…")
         seed_demo_data(db)
+        ensure_reference_topics(db)
         sync_department_structure(db)
         backfill_notification_paths(db)
         sync_student_registrations(db)

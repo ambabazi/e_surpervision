@@ -43,7 +43,7 @@ export default function StudentSubmissions() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) {
-      setToast({ message: "Please select a PDF or Word document to upload.", kind: "error" });
+      setToast({ message: "Please select a PDF document to upload.", kind: "error" });
       return;
     }
 
@@ -102,7 +102,7 @@ export default function StudentSubmissions() {
         <div>
           <h1 className="text-2xl font-extrabold text-slate-800">Submissions</h1>
           <p className="text-sm text-slate-500">
-            Upload PDF or Word documents only (.pdf, .doc, .docx) — max 10 MB.
+            Upload PDF documents only (.pdf) — max 10 MB.
           </p>
           {windowInfo && (
             <p className="mt-1 text-xs text-gold-800">{windowInfo}</p>
@@ -141,12 +141,12 @@ export default function StudentSubmissions() {
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                Document (PDF or Word)
+                Document (PDF)
               </label>
               <input
                 ref={fileRef}
                 type="file"
-                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                accept=".pdf,application/pdf"
                 className="input cursor-pointer file:mr-3 file:rounded-lg file:border-0 file:bg-campus-maroon file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white"
                 onChange={(e) => onFileChange(e.target.files?.[0] || null)}
                 required

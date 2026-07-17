@@ -165,6 +165,7 @@ export interface HodStudentRow {
   department?: string;
   phone?: string;
   isAssigned: boolean;
+  approvedTopic?: string;
   projectTitle?: string;
   projectStatus?: ProjectStatus;
   supervisor?: User;
@@ -239,6 +240,13 @@ export interface TopicOption {
   abstract: string;
   similarityScore: number;
   similarityLevel: "low" | "medium" | "high";
+  similarTo?: string;
+}
+
+export interface ReferenceTopicRef {
+  id: number;
+  title: string;
+  description?: string;
 }
 
 export interface TopicProposal {
@@ -282,6 +290,7 @@ export interface HodProposalPipeline {
   stats: ProposalStats;
   proposals: TopicProposal[];
   activeProjects: ActiveProjectRef[];
+  referenceTopics: ReferenceTopicRef[];
   department: string;
 }
 

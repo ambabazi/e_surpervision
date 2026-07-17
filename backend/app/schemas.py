@@ -166,6 +166,7 @@ class HodStudentRowOut(CamelModel):
     department: Optional[str] = None
     phone: Optional[str] = None
     is_assigned: bool
+    approved_topic: Optional[str] = None
     project_title: Optional[str] = None
     project_status: Optional[ProjectStatus] = None
     supervisor: Optional[UserOut] = None
@@ -257,6 +258,13 @@ class TopicOptionOut(CamelModel):
     abstract: str
     similarity_score: float
     similarity_level: str
+    similar_to: Optional[str] = None
+
+
+class ReferenceTopicOut(CamelModel):
+    id: int
+    title: str
+    description: Optional[str] = None
 
 
 class TopicProposalOut(CamelModel):
@@ -326,6 +334,7 @@ class HodProposalPipelineOut(CamelModel):
     stats: ProposalStatsOut
     proposals: list[TopicProposalOut]
     active_projects: list[ActiveProjectOut]
+    reference_topics: list[ReferenceTopicOut] = []
     department: str
 
 

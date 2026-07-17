@@ -21,11 +21,13 @@ from app.models import (
     Priority,
     Project,
     ProjectStatus,
+    ProposalStatus,
     Role,
     Submission,
     SubmissionStatus,
     Task,
     TaskStatus,
+    TopicProposal,
     User,
 )
 from app.submission_policy import (
@@ -303,6 +305,47 @@ def supervisor_dashboard(db: Session, supervisor: User) -> SupervisorDashboardOu
     )
 
 
+def _approved_proposal_topic(proposal: TopicProposal) -> str | None:
+    idx = proposal.selected_topic_index
+    if idx not in (1, 2, 3):
+        return None
+    topics = {1: proposal.topic_1, 2: proposal.topic_2, 3: proposal.topic_3}
+    title = (topics[idx] or "").strip()
+    return title or None
+
+
+def _approved_topics_by_student(db: Session, department: str) -> dict[int, str]:
+    """Map student id -> approved topic title for the department."""
+    topics: dict[int, str] = {}
+    approved = (
+        db.query(TopicProposal)
+        .filter(
+            TopicProposal.department == department,
+            TopicProposal.status == ProposalStatus.APPROVED,
+        )
+        .all()
+    )
+    for proposal in approved:
+        topic = _approved_proposal_topic(proposal)
+        if not topic:
+            continue
+        student = None
+        if proposal.student_user_id:
+            student = db.query(User).filter(User.id == proposal.student_user_id).first()
+        if not student and proposal.registration_number:
+            student = (
+                db.query(User)
+                .filter(
+                    User.role == Role.STUDENT,
+                    User.registration_number == proposal.registration_number,
+                )
+                .first()
+            )
+        if student:
+            topics[student.id] = topic
+    return topics
+
+
 def hod_students_list(db: Session, hod: User) -> list:
     from app.schemas import HodStudentRowOut
 
@@ -310,6 +353,8 @@ def hod_students_list(db: Session, hod: User) -> list:
     students = db.query(User).filter(User.role == Role.STUDENT).order_by(User.full_name.asc()).all()
     if dept:
         students = [s for s in students if s.department == dept or _student_in_department(db, s, dept)]
+
+    approved_topics = _approved_topics_by_student(db, dept) if dept else {}
 
     rows = []
     for st in students:
@@ -320,6 +365,7 @@ def hod_students_list(db: Session, hod: User) -> list:
             .first()
         )
         assigned = project is not None and project.supervisor_id is not None
+        approved_topic = approved_topics.get(st.id) or (project.title if project else None)
         rows.append(
             HodStudentRowOut(
                 id=st.id,
@@ -330,6 +376,7 @@ def hod_students_list(db: Session, hod: User) -> list:
                 department=st.department,
                 phone=st.phone,
                 is_assigned=assigned,
+                approved_topic=approved_topic,
                 project_title=project.title if project else None,
                 project_status=project.status if project else None,
                 supervisor=user_out(project.supervisor) if project and project.supervisor else None,
@@ -417,15 +464,15 @@ def create_submission(db: Session, student: User, *, title: str, notes: str | No
     validate_submission_window()
 
     if not file_name:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A PDF or Word document is required.")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A PDF document is required.")
     if not file_url:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "A document upload is required.")
 
     ext = file_name[file_name.rfind(".") :].lower() if "." in file_name else ""
-    if ext not in {".pdf", ".doc", ".docx"}:
+    if ext != ".pdf":
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            "Only PDF and Word documents (.pdf, .doc, .docx) are allowed.",
+            "Only PDF documents (.pdf) are allowed.",
         )
 
     project = require_project(db, student)

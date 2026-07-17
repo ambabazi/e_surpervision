@@ -13,6 +13,7 @@ from app.models import (
     Project,
     ProjectStatus,
     ProposalStatus,
+    ReferenceTopic,
     RequestStatus,
     Role,
     SupervisorStudentRequest,
@@ -70,15 +71,72 @@ def _hod_for_department(db: Session, department: Department) -> User | None:
     )
 
 
+def _approved_proposal_topic(proposal: TopicProposal) -> tuple[str, str] | None:
+    idx = proposal.selected_topic_index
+    if idx not in (1, 2, 3):
+        return None
+    topics = {
+        1: (proposal.topic_1, proposal.abstract_1),
+        2: (proposal.topic_2, proposal.abstract_2),
+        3: (proposal.topic_3, proposal.abstract_3),
+    }
+    title, abstract = topics[idx]
+    if not (title or "").strip():
+        return None
+    return title.strip(), (abstract or "").strip()
+
+
+def topic_comparison_corpus(
+    db: Session,
+    department: str | None = None,
+    *,
+    exclude_proposal_id: int | None = None,
+) -> list[tuple[str, str]]:
+    """Approved capstone topics + department reference library only."""
+    if not department:
+        return []
+
+    seen: set[tuple[str, str]] = set()
+    corpus: list[tuple[str, str]] = []
+
+    def add(title: str | None, description: str | None) -> None:
+        clean_title = (title or "").strip()
+        if not clean_title:
+            return
+        key = (clean_title.lower(), (description or "").strip().lower())
+        if key in seen:
+            return
+        seen.add(key)
+        corpus.append((clean_title, (description or "").strip()))
+
+    for ref in db.query(ReferenceTopic).filter(ReferenceTopic.department == department).all():
+        add(ref.title, ref.description)
+
+    approved_query = db.query(TopicProposal).filter(
+        TopicProposal.department == department,
+        TopicProposal.status == ProposalStatus.APPROVED,
+    )
+    if exclude_proposal_id:
+        approved_query = approved_query.filter(TopicProposal.id != exclude_proposal_id)
+
+    for proposal in approved_query.all():
+        selected = _approved_proposal_topic(proposal)
+        if selected:
+            add(selected[0], selected[1])
+
+    return corpus
+
+
 def existing_project_corpus(db: Session, department: str | None = None) -> list[tuple[str, str]]:
-    q = db.query(Project).filter(Project.status != ProjectStatus.COMPLETED)
-    if department:
-        q = q.join(User, Project.supervisor_id == User.id).filter(User.department == department)
-    rows = q.all()
-    return [(p.title, p.description or "") for p in rows]
+    return topic_comparison_corpus(db, department)
 
 
-def topic_option_out(index: int, topic: str, abstract: str, existing: list[tuple[str, str]]) -> TopicOptionOut:
+def topic_option_out(
+    index: int,
+    topic: str,
+    abstract: str,
+    existing: list[tuple[str, str]],
+) -> TopicOptionOut:
     scores = score_proposal_topics([(topic, abstract)], existing)
     s = scores[0]
     return TopicOptionOut(
@@ -87,11 +145,12 @@ def topic_option_out(index: int, topic: str, abstract: str, existing: list[tuple
         abstract=abstract,
         similarity_score=s["similarityScore"],
         similarity_level=s["similarityLevel"],
+        similar_to=s.get("similarTo"),
     )
 
 
 def proposal_out(db: Session, p: TopicProposal) -> TopicProposalOut:
-    existing = existing_project_corpus(db, p.department)
+    existing = topic_comparison_corpus(db, p.department, exclude_proposal_id=p.id)
     topics = [
         topic_option_out(1, p.topic_1, p.abstract_1, existing),
         topic_option_out(2, p.topic_2, p.abstract_2, existing),
@@ -264,6 +323,18 @@ def _create_student_user(
     return student
 
 
+def reference_topics_out(db: Session, department: str | None = None):
+    from app.schemas import ReferenceTopicOut
+
+    q = db.query(ReferenceTopic).order_by(ReferenceTopic.title.asc())
+    if department:
+        q = q.filter(ReferenceTopic.department == department)
+    return [
+        ReferenceTopicOut(id=ref.id, title=ref.title, description=ref.description)
+        for ref in q.all()
+    ]
+
+
 def active_projects_out(db: Session, department: str | None = None):
     from app.schemas import ActiveProjectOut
 
@@ -309,7 +380,8 @@ def hod_proposal_pipeline(
             total=pending + approved + rejected,
         ),
         proposals=list_topic_proposals(db, status_filter=status_filter, department=dept),
-        active_projects=active_projects_out(db, department=dept),
+        active_projects=[],
+        reference_topics=[],
         department=dept,
     )
 

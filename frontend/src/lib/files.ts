@@ -1,21 +1,17 @@
 import mammoth from "mammoth";
 import { api } from "./api";
 
-const ALLOWED = [".pdf", ".doc", ".docx"] as const;
+const ALLOWED = [".pdf"] as const;
 
-const MIME_TYPES = new Set([
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-]);
+const MIME_TYPES = new Set(["application/pdf"]);
 
 export function validateSubmissionFile(file: File): string | null {
   const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
   if (!ALLOWED.includes(ext as (typeof ALLOWED)[number])) {
-    return "Only PDF and Word documents (.pdf, .doc, .docx) are allowed.";
+    return "Only PDF documents (.pdf) are allowed.";
   }
   if (file.type && !MIME_TYPES.has(file.type)) {
-    return "Invalid file type. Please upload a PDF or Word document.";
+    return "Invalid file type. Please upload a PDF document.";
   }
   if (file.size > 10 * 1024 * 1024) {
     return "File is too large. Maximum size is 10 MB.";

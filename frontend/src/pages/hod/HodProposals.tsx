@@ -18,7 +18,7 @@ import {
   StatusBadge,
 } from "@/components/ui";
 import { timeAgo, formatDateTime } from "@/lib/format";
-import type { HodProposalPipeline, PublicSupervisor, ProposalStatus, TopicProposal } from "@/types";
+import type { HodProposalPipeline, ProposalStatus, PublicSupervisor, TopicProposal } from "@/types";
 
 const FILTERS: { label: string; value: ProposalStatus | "ALL" }[] = [
   { label: "All", value: "ALL" },
@@ -44,7 +44,9 @@ export default function HodProposals() {
   if (loading) return <Spinner label="Loading applicants..." />;
   if (error || !data) return <EmptyState message={error || "Unable to load"} />;
 
-  const pendingApplicants = data.proposals.filter((p) => p.status === "PENDING");
+  const pending = data.proposals.filter((p) => p.status === "PENDING");
+  const approved = data.proposals.filter((p) => p.status === "APPROVED");
+  const rejected = data.proposals.filter((p) => p.status === "REJECTED");
 
   return (
     <div className="space-y-6">
@@ -53,8 +55,8 @@ export default function HodProposals() {
           Topic Applicants{data.department ? ` — ${data.department}` : ""}
         </h1>
         <p className="text-sm text-slate-500">
-          Students at the topic submission stage — not yet assigned supervisors. Similarity scores
-          are compared against active projects below.
+          Students at the topic submission stage — not yet assigned supervisors. Similarity is
+          checked against approved capstone topics and the department reference library only.
         </p>
       </div>
 
@@ -81,136 +83,57 @@ export default function HodProposals() {
         ))}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        <div className="space-y-4 xl:col-span-2">
-          <SectionTitle
+      <div className="space-y-8">
+        {filter === "ALL" ? (
+          <>
+            <ProposalSection
+              title="To be reviewed"
+              subtitle={`${pending.length} applicant(s) awaiting your decision`}
+              emptyMessage="No pending topic submissions."
+              proposals={pending}
+              onApprove={setActive}
+              onReject={setRejectTarget}
+            />
+            <ProposalSection
+              title="Approved"
+              subtitle={`${approved.length} applicant(s) assigned to supervisors`}
+              emptyMessage="No approved submissions yet."
+              proposals={approved}
+            />
+            <ProposalSection
+              title="Rejected"
+              subtitle={`${rejected.length} applicant(s) notified by email`}
+              emptyMessage="No rejected submissions."
+              proposals={rejected}
+            />
+          </>
+        ) : (
+          <ProposalSection
             title={
-              filter === "ALL"
-                ? "All topic submissions"
-                : `${filter.charAt(0)}${filter.slice(1).toLowerCase()} submissions`
+              filter === "PENDING"
+                ? "To be reviewed"
+                : filter === "APPROVED"
+                  ? "Approved"
+                  : "Rejected"
             }
             subtitle={`${data.proposals.length} record(s)`}
+            emptyMessage="No submissions in this category."
+            proposals={data.proposals}
+            onApprove={filter === "PENDING" ? setActive : undefined}
+            onReject={filter === "PENDING" ? setRejectTarget : undefined}
           />
-          {data.proposals.length === 0 ? (
-            <EmptyState message="No submissions in this category." />
-          ) : (
-            data.proposals.map((p) => (
-              <Card key={p.id}>
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <p className="text-lg font-bold text-slate-800">{p.fullName}</p>
-                    <p className="flex items-center gap-1 text-sm font-mono text-crimson-700">
-                      <Hash size={13} /> {p.registrationNumber}
-                    </p>
-                    <p className="text-sm text-slate-500">
-                      {p.program} · {p.email} · {timeAgo(p.createdAt)} · {formatDateTime(p.createdAt)}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-400">
-                      Supervisors: {p.supervisorChoice1?.fullName} (1st),{" "}
-                      {p.supervisorChoice2?.fullName} (2nd)
-                    </p>
-                  </div>
-                  <StatusBadge status={p.status} />
-                </div>
+        )}
 
-                {p.status === "PENDING" && (
-                  <div className="mt-4 grid gap-3 lg:grid-cols-3">
-                    {p.topics.map((t) => (
-                      <div
-                        key={t.topicIndex}
-                        className={`rounded-xl border p-4 ${similarityClass(t.similarityLevel)}`}
-                      >
-                        <div className="mb-2 flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold uppercase tracking-wide">
-                            Option {t.topicIndex}
-                          </span>
-                          <span className="flex items-center gap-1 text-xs font-bold">
-                            {t.similarityLevel === "high" && <AlertTriangle size={12} />}
-                            {t.similarityScore}% similar
-                          </span>
-                        </div>
-                        <p className="text-sm font-semibold">{t.topic}</p>
-                        <p className="mt-2 text-xs leading-relaxed opacity-90 line-clamp-4">
-                          {t.abstract}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {p.status === "APPROVED" && p.selectedTopicIndex && (
-                  <p className="mt-3 text-sm text-emerald-700">
-                    Approved topic option {p.selectedTopicIndex}
-                    {p.assignedSupervisor ? ` · Supervisor: ${p.assignedSupervisor.fullName}` : ""}
-                  </p>
-                )}
-
-                {p.status === "REJECTED" && p.rejectionReason && (
-                  <p className="mt-3 text-sm text-slate-600">Reason: {p.rejectionReason}</p>
-                )}
-
-                {p.status === "PENDING" && (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <button className="btn-primary !py-2 text-xs" onClick={() => setActive(p)}>
-                      Assign & approve
-                    </button>
-                    <button
-                      className="btn-outline !py-2 text-xs text-crimson-700"
-                      onClick={() => setRejectTarget(p)}
-                    >
-                      Reject
-                    </button>
-                  </div>
-                )}
-              </Card>
-            ))
-          )}
-        </div>
-
-        <div>
-          <Card>
-            <SectionTitle
-              title="Active projects"
-              subtitle={`${data.activeProjects.length} in progress — similarity baseline`}
-            />
-            {data.activeProjects.length === 0 ? (
-              <EmptyState message="No active projects yet." />
-            ) : (
-              <div className="max-h-[640px] space-y-2 overflow-y-auto">
-                {data.activeProjects.map((proj) => (
-                  <div
-                    key={proj.id}
-                    className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm"
-                  >
-                    <p className="font-semibold text-slate-800">{proj.title}</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {proj.studentName || "Unassigned"}
-                      {proj.supervisorName ? ` · ${proj.supervisorName}` : ""}
-                    </p>
-                    {proj.program && (
-                      <p className="text-xs text-slate-400">{proj.program}</p>
-                    )}
-                    <div className="mt-2 flex items-center gap-2">
-                      <StatusBadge status={proj.status} />
-                      <span className="text-xs text-slate-400">{proj.progress}%</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+        {pending.length > 0 && (
+          <Card className="border-gold-200 bg-gold-50">
+            <p className="text-sm font-semibold text-gold-900">
+              {pending.length} applicant(s) awaiting supervisor assignment
+            </p>
+            <p className="mt-1 text-xs text-gold-800">
+              A score of 100% means the proposed title matches an approved or reference topic already on record.
+            </p>
           </Card>
-
-          {pendingApplicants.length > 0 && (
-            <Card className="mt-4 border-gold-200 bg-gold-50">
-              <p className="text-sm font-semibold text-gold-900">
-                {pendingApplicants.length} applicant(s) awaiting supervisor assignment
-              </p>
-              <p className="mt-1 text-xs text-gold-800">
-                Approve a proposal to create their portal and assign a supervisor. Students are emailed when assigned or rejected.
-              </p>
-            </Card>
-          )}
-        </div>
+        )}
       </div>
 
       {active && (
@@ -235,6 +158,149 @@ export default function HodProposals() {
         />
       )}
     </div>
+  );
+}
+
+function ProposalSection({
+  title,
+  subtitle,
+  emptyMessage,
+  proposals,
+  onApprove,
+  onReject,
+}: {
+  title: string;
+  subtitle: string;
+  emptyMessage: string;
+  proposals: TopicProposal[];
+  onApprove?: (proposal: TopicProposal) => void;
+  onReject?: (proposal: TopicProposal) => void;
+}) {
+  return (
+    <section className="space-y-4">
+      <SectionTitle title={title} subtitle={subtitle} />
+      {proposals.length === 0 ? (
+        <EmptyState message={emptyMessage} />
+      ) : (
+        proposals.map((p) => (
+          <ProposalCard
+            key={p.id}
+            proposal={p}
+            onApprove={onApprove}
+            onReject={onReject}
+          />
+        ))
+      )}
+    </section>
+  );
+}
+
+function ProposalCard({
+  proposal: p,
+  onApprove,
+  onReject,
+}: {
+  proposal: TopicProposal;
+  onApprove?: (proposal: TopicProposal) => void;
+  onReject?: (proposal: TopicProposal) => void;
+}) {
+  return (
+    <Card>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-lg font-bold text-slate-800">{p.fullName}</p>
+          <p className="flex items-center gap-1 text-sm font-mono text-crimson-700">
+            <Hash size={13} /> {p.registrationNumber}
+          </p>
+          <p className="text-sm text-slate-500">
+            {p.program} · {p.email} · {timeAgo(p.createdAt)} · {formatDateTime(p.createdAt)}
+          </p>
+          {p.status === "PENDING" && (
+            <p className="mt-1 text-xs text-slate-400">
+              Supervisors: {p.supervisorChoice1?.fullName} (1st), {p.supervisorChoice2?.fullName} (2nd)
+            </p>
+          )}
+        </div>
+        <StatusBadge status={p.status} />
+      </div>
+
+      {p.status === "PENDING" && (
+        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+          {p.topics.map((t) => (
+            <div
+              key={t.topicIndex}
+              className={`rounded-xl border p-4 ${similarityClass(t.similarityLevel)}`}
+            >
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="text-xs font-bold uppercase tracking-wide">
+                  Option {t.topicIndex}
+                </span>
+                <span className="flex items-center gap-1 text-xs font-bold">
+                  {t.similarityLevel === "high" && <AlertTriangle size={12} />}
+                  {t.similarityScore}% similar
+                </span>
+              </div>
+              <p className="text-sm font-semibold">{t.topic}</p>
+              <p className="mt-2 text-xs leading-relaxed opacity-90 line-clamp-4">{t.abstract}</p>
+              {t.similarTo && (
+                <p className="mt-2 text-xs font-medium opacity-90">
+                  Closest match: {t.similarTo}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {p.status === "APPROVED" && p.selectedTopicIndex && (
+        <div className="mt-3 space-y-1">
+          <p className="text-sm text-emerald-700">
+            Approved topic option {p.selectedTopicIndex}
+            {p.assignedSupervisor ? ` · Supervisor: ${p.assignedSupervisor.fullName}` : ""}
+          </p>
+          {p.topics[p.selectedTopicIndex - 1] && (
+            <p className="text-sm font-medium text-slate-700">
+              {p.topics[p.selectedTopicIndex - 1].topic}
+            </p>
+          )}
+        </div>
+      )}
+
+      {p.status === "REJECTED" && (
+        <div className="mt-3 space-y-2">
+          {p.rejectionReason && (
+            <p className="text-sm text-slate-600">Reason: {p.rejectionReason}</p>
+          )}
+          <div className="grid gap-2 lg:grid-cols-3">
+            {p.topics.map((t) => (
+              <div key={t.topicIndex} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                <p className="text-xs font-semibold uppercase text-slate-500">Option {t.topicIndex}</p>
+                <p className="mt-1 text-sm text-slate-700">{t.topic}</p>
+                {t.similarTo && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    {t.similarityScore}% similar to {t.similarTo}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {p.status === "PENDING" && onApprove && onReject && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button className="btn-primary !py-2 text-xs" onClick={() => onApprove(p)}>
+            Assign & approve
+          </button>
+          <button
+            className="btn-outline !py-2 text-xs text-crimson-700"
+            onClick={() => onReject(p)}
+          >
+            Reject
+          </button>
+        </div>
+      )}
+    </Card>
   );
 }
 
@@ -319,7 +385,10 @@ function ApproveModal({
               />
               <div>
                 <p className="text-sm font-semibold text-slate-800">{t.topic}</p>
-                <p className="text-xs text-slate-500">{t.similarityScore}% similar to active projects</p>
+                <p className="text-xs text-slate-500">
+                  {t.similarityScore}% similar
+                  {t.similarTo ? ` to “${t.similarTo}”` : " to existing topics"}
+                </p>
               </div>
             </label>
           ))}
