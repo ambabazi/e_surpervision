@@ -8,6 +8,7 @@ export function parseApiError(err: unknown, fallback: string): string {
       };
     };
     message?: string;
+    code?: string;
   };
 
   if (!ax.response) {
