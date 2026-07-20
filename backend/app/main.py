@@ -12,7 +12,14 @@ from app.config import settings
 from app.database import Base, engine, get_db
 from app.files import UPLOAD_DIR, ensure_upload_dir, save_upload
 from app.file_access import assert_file_access, submission_for_filename
-from app.submission_files import regenerate_submission_file
+from app.submission_files import (
+    ensure_all_submission_files,
+    filename_from_file_url,
+    is_demo_submission_filename,
+    is_real_upload_file,
+    MIN_REAL_UPLOAD_BYTES,
+    regenerate_submission_file,
+)
 from app.models import Notification, Project, Role, Submission, User
 from app.models import ProposalStatus
 from app.schemas import (
@@ -85,6 +92,7 @@ from app.services import (
     supervisor_dashboard,
     supervisor_students_list,
     task_board,
+    update_submission,
     user_out,
 )
 
@@ -184,9 +192,18 @@ def download_file(filename: str, user: User = Depends(get_current_user), db: Ses
     assert_file_access(db, user, safe_name)
     path = UPLOAD_DIR / safe_name
     if not path.exists() or not path.is_file():
-        path = regenerate_submission_file(db, safe_name)
+        if is_demo_submission_filename(safe_name):
+            path = regenerate_submission_file(db, safe_name)
         if not path or not path.exists():
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "File not found")
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND,
+                "The uploaded file is no longer on the server. Ask the student to submit it again.",
+            )
+    elif is_real_upload_file(path) and path.stat().st_size < MIN_REAL_UPLOAD_BYTES:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            "The uploaded file was lost on the server. Ask the student to submit it again.",
+        )
     submission = submission_for_filename(db, safe_name)
     media_type = "application/octet-stream"
     if safe_name.lower().endswith(".pdf"):
@@ -316,6 +333,25 @@ async def student_submit(
     )
 
 
+@app.patch("/api/student/submissions/{submission_id}", response_model=SubmissionOut)
+async def student_update_submission(
+    submission_id: int,
+    notes: str = Form(""),
+    file: UploadFile = File(...),
+    user: User = Depends(require_role(Role.STUDENT)),
+    db: Session = Depends(get_db),
+):
+    stored_name, file_url = await save_upload(file)
+    return update_submission(
+        db,
+        user,
+        submission_id,
+        notes=notes.strip() or None,
+        file_url=file_url,
+        file_name=file.filename,
+    )
+
+
 @app.get("/api/supervisor/dashboard", response_model=SupervisorDashboardOut)
 def supervisor_dash(user: User = Depends(require_role(Role.SUPERVISOR)), db: Session = Depends(get_db)):
     return supervisor_dashboard(db, user)
@@ -335,7 +371,13 @@ def supervisor_reviews(user: User = Depends(require_role(Role.SUPERVISOR)), db: 
         .filter(Project.supervisor_id == user.id)
         .all()
     )
-    return [submission_out(s) for s in rows if s]
+    real_uploads = [
+        s
+        for s in rows
+        if s.file_url
+        and not is_demo_submission_filename(filename_from_file_url(s.file_url) or "")
+    ]
+    return [submission_out(s) for s in real_uploads if s]
 
 
 @app.post("/api/supervisor/submissions/{submission_id}/review", response_model=SubmissionOut)

@@ -8,6 +8,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import decode_token
+from app.files import UPLOAD_DIR
 from app.database import get_db
 from app.email_service import (
     notify_submission_received,
@@ -34,6 +35,7 @@ from app.submission_policy import (
     sort_submissions_by_priority,
     validate_submission_window,
 )
+from app.submission_files import filename_from_file_url, is_real_upload_file
 from app.schemas import (
     FeedbackOut,
     HodDashboardOut,
@@ -257,6 +259,7 @@ def task_board(db: Session, student: User) -> TaskBoardOut:
 
 def supervisor_dashboard(db: Session, supervisor: User) -> SupervisorDashboardOut:
     from app.proposal_services import pending_review_out
+    from app.submission_files import filename_from_file_url, is_demo_submission_filename
 
     projects = (
         db.query(Project)
@@ -274,6 +277,11 @@ def supervisor_dashboard(db: Session, supervisor: User) -> SupervisorDashboardOu
         .filter(Project.supervisor_id == supervisor.id, Submission.status == SubmissionStatus.SUBMITTED)
         .all()
     )
+    pending = [
+        s
+        for s in pending
+        if s.file_url and not is_demo_submission_filename(filename_from_file_url(s.file_url) or "")
+    ]
     alerts = (
         db.query(Notification)
         .filter(Notification.user_id == supervisor.id)
@@ -524,6 +532,74 @@ def create_submission(db: Session, student: User, *, title: str, notes: str | No
     return submission_out(submission)
 
 
+def update_submission(
+    db: Session,
+    student: User,
+    submission_id: int,
+    *,
+    notes: str | None,
+    file_url: str,
+    file_name: str,
+) -> SubmissionOut:
+    if not file_name:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A PDF document is required.")
+    if not file_url:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A document upload is required.")
+
+    ext = file_name[file_name.rfind(".") :].lower() if "." in file_name else ""
+    if ext != ".pdf":
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Only PDF documents (.pdf) are allowed.",
+        )
+
+    project = require_project(db, student)
+    submission = (
+        db.query(Submission)
+        .filter(Submission.id == submission_id, Submission.project_id == project.id)
+        .first()
+    )
+    if not submission:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Submission not found")
+    if submission.status == SubmissionStatus.APPROVED:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Approved submissions cannot be changed. Contact your supervisor if you need to update this document.",
+        )
+
+    old_filename = filename_from_file_url(submission.file_url) if submission.file_url else None
+    if old_filename:
+        old_path = UPLOAD_DIR / old_filename
+        if is_real_upload_file(old_path) and old_path.exists():
+            try:
+                old_path.unlink()
+            except OSError:
+                pass
+
+    if notes is not None:
+        submission.notes = notes.strip() or None
+    submission.file_url = file_url
+    submission.file_name = file_name
+    submission.status = SubmissionStatus.SUBMITTED
+    submission.submitted_at = utc_now()
+
+    if project.supervisor_id:
+        db.add(
+            Notification(
+                title=f"Resubmission from {student.full_name}",
+                message=f"{submission.title} — document updated",
+                type=NotificationType.ASSIGNMENT,
+                severity=Priority.MEDIUM,
+                user_id=project.supervisor_id,
+                action_path="/supervisor/reviews",
+            )
+        )
+
+    db.commit()
+    db.refresh(submission)
+    return submission_out(submission)
+
+
 def review_submission(db: Session, supervisor: User, submission_id: int, *, status: str, feedback: str | None) -> SubmissionOut:
     submission = (
         db.query(Submission)
@@ -589,6 +665,7 @@ def review_submission(db: Session, supervisor: User, submission_id: int, *, stat
 
 def supervisor_students_list(db: Session, supervisor: User):
     from app.schemas import SupervisorStudentOut
+    from app.submission_files import filename_from_file_url, is_demo_submission_filename
 
     projects = (
         db.query(Project)
@@ -605,6 +682,11 @@ def supervisor_students_list(db: Session, supervisor: User):
             .order_by(Submission.submitted_at.desc())
             .all()
         )
+        submissions = [
+            s
+            for s in submissions
+            if s.file_url and not is_demo_submission_filename(filename_from_file_url(s.file_url) or "")
+        ]
         tasks = db.query(Task).filter(Task.project_id == p.id).all()
         milestones = [t for t in tasks if t.milestone]
         last = submissions[0] if submissions else None

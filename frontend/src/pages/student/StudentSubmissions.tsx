@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FileText, Plus, Upload, X } from "lucide-react";
+import { FileText, Pencil, Plus, Upload, X } from "lucide-react";
 import { useApi } from "@/lib/useApi";
 import { api } from "@/lib/api";
 import { formatFileSize, validateSubmissionFile } from "@/lib/files";
@@ -22,9 +22,13 @@ export default function StudentSubmissions() {
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editNotes, setEditNotes] = useState("");
+  const [editFile, setEditFile] = useState<File | null>(null);
   const [toast, setToast] = useState<{ message: string; kind: ToastKind } | null>(null);
   const [windowInfo, setWindowInfo] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const editFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     api
@@ -39,6 +43,24 @@ export default function StudentSubmissions() {
     setFile(null);
     if (fileRef.current) fileRef.current.value = "";
   };
+
+  const resetEditForm = () => {
+    setEditingId(null);
+    setEditNotes("");
+    setEditFile(null);
+    if (editFileRef.current) editFileRef.current.value = "";
+  };
+
+  const startEdit = (submission: Submission) => {
+    setShowForm(false);
+    resetForm();
+    setEditingId(submission.id);
+    setEditNotes(submission.notes ?? "");
+    setEditFile(null);
+    if (editFileRef.current) editFileRef.current.value = "";
+  };
+
+  const canEditSubmission = (status: Submission["status"]) => status !== "APPROVED";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,6 +112,50 @@ export default function StudentSubmissions() {
       return;
     }
     setFile(selected);
+  };
+
+  const onEditFileChange = (selected: File | null) => {
+    if (!selected) {
+      setEditFile(null);
+      return;
+    }
+    const validationError = validateSubmissionFile(selected);
+    if (validationError) {
+      setToast({ message: validationError, kind: "error" });
+      setEditFile(null);
+      if (editFileRef.current) editFileRef.current.value = "";
+      return;
+    }
+    setEditFile(selected);
+  };
+
+  const resubmit = async (e: React.FormEvent, submissionId: number) => {
+    e.preventDefault();
+    if (!editFile) {
+      setToast({ message: "Please select a PDF document to upload.", kind: "error" });
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const form = new FormData();
+      form.append("notes", editNotes.trim());
+      form.append("file", editFile);
+      await api.patch(`/student/submissions/${submissionId}`, form);
+      resetEditForm();
+      reload();
+      setToast({
+        message: "Document re-uploaded. Your supervisor has been notified.",
+        kind: "success",
+      });
+    } catch (err: unknown) {
+      setToast({
+        message: parseApiError(err, "Re-upload failed. Please check your file and try again."),
+        kind: "error",
+      });
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -173,17 +239,84 @@ export default function StudentSubmissions() {
       ) : (
         <div className="space-y-3">
           {data.map((s) => (
-            <Card key={s.id} className="flex items-center gap-4 !p-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-crimson-50 text-crimson-700">
-                <FileText size={20} />
+            <Card key={s.id} className="!p-4">
+              <div className="flex items-center gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-crimson-50 text-crimson-700">
+                  <FileText size={20} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-slate-800">{s.title}</p>
+                  <p className="truncate text-xs text-slate-500">
+                    {s.fileName} · Submitted {formatDate(s.submittedAt)}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {canEditSubmission(s.status) && editingId !== s.id && (
+                    <button
+                      type="button"
+                      className="btn-outline !px-3 !py-1.5 text-sm"
+                      onClick={() => startEdit(s)}
+                    >
+                      <Pencil size={16} /> Re-upload
+                    </button>
+                  )}
+                  <StatusBadge status={s.status} />
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold text-slate-800">{s.title}</p>
-                <p className="truncate text-xs text-slate-500">
-                  {s.fileName} · Submitted {formatDate(s.submittedAt)}
-                </p>
-              </div>
-              <StatusBadge status={s.status} />
+
+              {editingId === s.id && (
+                <form onSubmit={(e) => resubmit(e, s.id)} className="mt-4 space-y-4 border-t border-slate-100 pt-4">
+                  <SectionTitle
+                    title="Re-upload document"
+                    subtitle={`Replace the PDF for "${s.title}". The title stays the same.`}
+                  />
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Notes for supervisor
+                    </label>
+                    <textarea
+                      className="input min-h-[90px]"
+                      placeholder="Optional — explain what changed..."
+                      value={editNotes}
+                      onChange={(e) => setEditNotes(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                      New document (PDF)
+                    </label>
+                    <input
+                      ref={editFileRef}
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      className="input cursor-pointer file:mr-3 file:rounded-lg file:border-0 file:bg-campus-maroon file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white"
+                      onChange={(e) => onEditFileChange(e.target.files?.[0] || null)}
+                      required
+                    />
+                    {editFile && (
+                      <p className="mt-2 text-xs text-slate-500">
+                        Selected: {editFile.name} ({formatFileSize(editFile.size)})
+                      </p>
+                    )}
+                    {s.fileName && (
+                      <p className="mt-1 text-xs text-slate-400">Current file: {s.fileName}</p>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="submit" className="btn-primary" disabled={busy || !editFile}>
+                      <Upload size={18} /> {busy ? "Uploading..." : "Save & re-submit"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-outline"
+                      onClick={resetEditForm}
+                      disabled={busy}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
             </Card>
           ))}
         </div>

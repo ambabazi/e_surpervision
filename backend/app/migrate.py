@@ -98,7 +98,7 @@ def repair_demo_data(db) -> None:
     from sqlalchemy.orm import joinedload
 
     from app.models import Feedback, Submission
-    from app.submission_files import ensure_all_submission_files, write_demo_submission_file
+    from app.submission_files import ensure_all_submission_files, is_demo_submission_filename, write_demo_submission_file
 
     changed = False
 
@@ -136,6 +136,8 @@ def repair_demo_data(db) -> None:
     )
     for submission in submissions:
         filename = submission.file_url.split("/")[-1]
+        if not is_demo_submission_filename(filename):
+            continue
         path = UPLOAD_DIR / filename
         if path.exists():
             continue
@@ -147,7 +149,5 @@ def repair_demo_data(db) -> None:
             student_name=student_name,
             project_title=project_title,
             notes=submission.notes or "Submitted via the E-Supervision Portal.",
-            force=True,
+            force=False,
         )
-
-    ensure_all_submission_files(db, force=True)

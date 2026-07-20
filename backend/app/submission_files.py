@@ -23,6 +23,20 @@ def stored_name_for_submission(project_id: int, title: str, ext: str) -> str:
     return f"demo_{project_id}_{submission_slug(title)}{ext}"
 
 
+def is_demo_submission_filename(filename: str) -> bool:
+    """Seed/demo files only — real student uploads use uuid-based names."""
+    return Path(filename).name.startswith("demo_")
+
+
+def is_real_upload_file(path: Path) -> bool:
+    """True when this path should contain an actual student-uploaded document."""
+    return not is_demo_submission_filename(path.name)
+
+
+# Student PDFs smaller than this were likely replaced by the old placeholder generator.
+MIN_REAL_UPLOAD_BYTES = 2048
+
+
 def minimal_docx_bytes(title: str, body: str) -> bytes:
     content_types = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -109,6 +123,15 @@ def ensure_submission_file(submission: Submission, *, force: bool = False) -> Pa
     if not filename:
         return None
 
+    path = UPLOAD_DIR / filename
+    is_demo = is_demo_submission_filename(filename)
+    if path.exists() and not force:
+        return path
+    if not is_demo and not path.exists():
+        return None
+    if not is_demo and force:
+        return path if path.exists() else None
+
     student_name = "Student"
     project_title = "Capstone Project"
     if submission.project:
@@ -140,17 +163,24 @@ def ensure_all_submission_files(db: Session, *, force: bool = False) -> int:
     )
     count = 0
     for submission in submissions:
+        if force and submission.file_url:
+            filename = filename_from_file_url(submission.file_url)
+            if filename and not is_demo_submission_filename(filename):
+                continue
         if ensure_submission_file(submission, force=force):
             count += 1
     return count
 
 
 def regenerate_submission_file(db: Session, filename: str) -> Path | None:
+    """Recreate missing seed/demo files only — never replace real student uploads."""
     from sqlalchemy.orm import joinedload
 
     from app.models import Project
 
     safe = Path(filename).name
+    if not is_demo_submission_filename(safe):
+        return None
     submission = (
         db.query(Submission)
         .options(joinedload(Submission.project).joinedload(Project.student))

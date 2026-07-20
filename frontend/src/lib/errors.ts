@@ -25,6 +25,9 @@ export function parseApiError(err: unknown, fallback: string): string {
   const detail = data?.detail;
 
   if (status === 404) {
+    if (typeof data?.message === "string" && data.message) {
+      return data.message;
+    }
     return (typeof detail === "string" ? detail : null) || "The requested resource was not found.";
   }
 
