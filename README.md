@@ -154,6 +154,7 @@ App: **http://localhost:5173**
 
 #### 1. Install prerequisites
 
+
 ```bash
 sudo apt update
 sudo apt install -y python3 python3-venv python3-pip nodejs npm postgresql postgresql-contrib
